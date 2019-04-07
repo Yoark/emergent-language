@@ -62,7 +62,7 @@ class GameModule(nn.Module):
 
         #TODO: Bad for loop?
         for b in range(self.batch_size):
-            goal_agents[b] = torch.randperm(self.num_agents)
+            goal_agents[b] = torch.randperm(self.num_agents).view(self.num_agents, 1)
 
         for b in range(self.batch_size):
             goal_locations[b] = self.locations.data[b][goal_entities[b].squeeze()]
