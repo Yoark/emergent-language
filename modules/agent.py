@@ -136,7 +136,7 @@ class AgentModule(nn.Module):
                                 movements, utterances)
 
             global LOG
-            LOG.append(movements, goal_predictions, utterances)
+            LOG.append([movements, goal_predictions, utterances])
             cost = game(movements, goal_predictions, utterances)
             if self.penalizing_words:
                 cost = cost + self.word_counter(utterances)
