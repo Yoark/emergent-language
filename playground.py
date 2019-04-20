@@ -18,7 +18,7 @@ config = {
         'memory_size': default_game_config.memory_size
     }
 
-# agent = torch.load('latest.pt')
-# agent.reset()
-# agent.train(False)
-# code.interact(local=locals())
+agent = torch.load('latest.pt')
+agent.reset()
+agent.train(False)
+code.interact(local=locals())
