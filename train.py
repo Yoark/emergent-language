@@ -113,9 +113,9 @@ def print_losses(epoch, losses, dists, game_config):
             dist = dist_al[-1] if dist_al else 0
             min_dist = min(dist_al) if dist_al else 0
 
-    print(
-        "[epoch %d][%d agents, %d landmarks][%d batches][last loss: %f][min loss: %f][last dist: %f][min dist: %f]"
-        % (epoch, a, l, len(loss_al), loss, min_loss, dist, min_dist))
+            print(
+                "[epoch %d][%d agents, %d landmarks][%d batches][last loss: %f][min loss: %f][last dist: %f][min dist: %f]"
+                % (epoch, a, l, len(loss_al), loss, min_loss, dist, min_dist))
     print("_________________________")
 
 
