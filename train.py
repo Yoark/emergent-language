@@ -1,12 +1,15 @@
 import argparse
+from collections import defaultdict
+
 import numpy as np
+
+import configs
 import torch
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-import configs
+
 from modules.agent import AgentModule
 from modules.game import GameModule
-from collections import defaultdict
 
 parser = argparse.ArgumentParser(
     description="Trains the agents for cooperative communication task")

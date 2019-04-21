@@ -12,6 +12,11 @@ class WordCountingModule(nn.Module):
         self.word_counts = Variable(word_counts)
 
     def forward(self, utterances):
+        import ipdb
         cost = -(utterances/(self.oov_prob + self.word_counts.sum() - 1)).sum()
+        ipdb.set_trace()
+
         self.word_counts = self.word_counts + utterances
+
+        ipdb.set_trace()
         return cost

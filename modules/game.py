@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
-from torch import Tensor
 from torch.autograd import Variable
-"""
+
+
+class GameModule(nn.Module):
+    """
     The GameModule takes in all actions(movement, utterance, goal prediction)
     of all agents for a given timestep and returns the total cost for that
     timestep.
@@ -21,10 +23,8 @@ from torch.autograd import Variable
             -action: [num_agents, memory_size]
 
         config needs: -batch_size, -using_utterances, -world_dim, -vocab_size, -memory_size, -num_colors -num_shapes
-"""
+    """
 
-
-class GameModule(nn.Module):
     def __init__(self, config, num_agents, num_landmarks):
         super(GameModule, self).__init__()
 
@@ -65,7 +65,8 @@ class GameModule(nn.Module):
 
         #TODO: Bad for loop?
         for b in range(self.batch_size):
-            goal_agents[b] = torch.randperm(self.num_agents).view(self.num_agents, -1)
+            goal_agents[b] = torch.randperm(self.num_agents).view(
+                self.num_agents, -1)
 
         for b in range(self.batch_size):
             goal_locations[b] = self.locations.data[b][
@@ -75,44 +76,31 @@ class GameModule(nn.Module):
         self.goals = Variable(torch.cat((goal_locations, goal_agents), 2))
         goal_agents = Variable(goal_agents)
 
+        mem_physical = torch.zeros(self.batch_size, self.num_agents,
+                                   self.num_entities, config.memory_size)
+        mem_action = torch.zeros(self.batch_size, self.num_agents,
+                                 config.memory_size)
         if self.using_cuda:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size).cuda()),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size).cuda())
-            }
-        else:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size)),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size))
-            }
+            mem_physical = mem_physical.cuda()
+            mem_action = mem_action.cuda()
+
+        self.memories = {
+            "physical": Variable(mem_physical),
+            "action": Variable(mem_action)
+        }
 
         if self.using_utterances:
+            utterances = torch.zeros(self.batch_size, self.num_agents,
+                                     config.vocab_size)
+            remembered_utterances = torch.zeros(
+                self.batch_size, self.num_agents, self.num_agents,
+                config.memory_size)
             if self.using_cuda:
-                self.utterances = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size).cuda())
-                self.memories["utterance"] = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size).cuda())
-            else:
-                self.utterances = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size))
-                self.memories["utterance"] = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size))
+                utterances = utterances.cuda()
+                remembered_utterances = remembered_utterances.cuda()
+
+            self.utterances = Variable(utterances)
+            self.memories["utterance"] = Variable(remembered_utterances)
 
         agent_baselines = self.locations[:, :self.num_agents, :]
 
@@ -132,23 +120,28 @@ class GameModule(nn.Module):
         # [batch_size, num_agents, 2] [batch_size, num_agents, 1]
         self.observed_goals = torch.cat((new_obs, goal_agents), dim=2)
 
-    """
-    Updates game state given all movements and utterances and returns accrued cost
-        - movements: [batch_size, num_agents, config.movement_size]
-        - utterances: [batch_size, num_agents, config.utterance_size]
-        - goal_predictions: [batch_size, num_agents, num_agents, config.goal_size]
-    Returns:
-        - scalar: total cost of all games in the batch
-    """
-
     def forward(self, movements, goal_predictions, utterances):
+        """
+        Updates game state given all movements and utterances and returns accrued cost
+            - movements: [batch_size, num_agents, config.movement_size]
+            - utterances: [batch_size, num_agents, config.utterance_size]
+            - goal_predictions: [batch_size, num_agents, num_agents, config.goal_size]
+        Returns:
+            - scalar: total cost of all games in the batch
+        """
         self.locations = self.locations + movements
         agent_baselines = self.locations[:, :self.num_agents]
         self.observations = self.locations.unsqueeze(
             1) - agent_baselines.unsqueeze(2)
         new_obs = self.goals[:, :, :2] - agent_baselines
         goal_agents = self.goals[:, :, 2].unsqueeze(2)
+        print('self.goals.shape: {}'.format(self.goals.shape))
+        print('new_obs.shape: {}'.format(new_obs.shape))
+        print('goal_agents.shape: {}'.format(goal_agents.shape))
+
         self.observed_goals = torch.cat((new_obs, goal_agents), dim=2)
+        print('self.observed_goals.shape: {}'.format(
+            self.observed_goals.shape))
         if self.using_utterances:
             self.utterances = utterances
             return self.compute_cost(movements, goal_predictions, utterances)
@@ -161,30 +154,30 @@ class GameModule(nn.Module):
         goal_pred_cost = self.compute_goal_pred_cost(goal_predictions)
         return physical_cost + goal_pred_cost + movement_cost
 
-    """
-    Computes the total cost agents get from being near their goals
-    agent locations are stored as [batch_size, num_agents + num_landmarks, entity_embed_size]
-    """
-
     def compute_physical_cost(self):
+        """
+        Computes the total cost agents get from being near their goals
+        agent locations are stored as [batch_size, num_agents + num_landmarks, entity_embed_size]
+        """
         return 2 * self.get_avg_agent_to_goal_distance()
 
-    """
-    Computes the total cost agents get from predicting others' goals
-    goal_predictions: [batch_size, num_agents, num_agents, goal_size]
-    goal_predictions[., a_i, a_j, :] = a_i's prediction of a_j's goal with location relative to a_i
-    We want:
-        real_goal_locations[., a_i, a_j, :] = a_j's goal with location relative to a_i
-    We have:
-        goals[., a_j, :] = a_j's goal with absolute location
-        observed_goals[., a_j, :] = a_j's goal with location relative to a_j
-    Which means we want to build an observed_goals-like tensor but relative to each agent
-        real_goal_locations[., a_i, a_j, :] = goals[., a_j, :] - locations[a_i]
-
-
-    """
-
     def compute_goal_pred_cost(self, goal_predictions):
+        """
+        Computes the total cost agents get from predicting others' goals
+        goal_predictions: [batch_size, num_agents, num_agents, goal_size]
+        goal_predictions[., a_i, a_j, :] = a_i's prediction of a_j's goal
+        with location relative to a_i
+
+        We want:
+            real_goal_locations[., a_i, a_j, :] = a_j's goal with location relative to a_i
+
+        We have:
+            goals[., a_j, :] = a_j's goal with absolute location
+            observed_goals[., a_j, :] = a_j's goal with location relative to a_j
+
+        Which means we want to build an observed_goals-like tensor but relative to each agent
+            real_goal_locations[., a_i, a_j, :] = goals[., a_j, :] - locations[a_i]
+        """
         relative_goal_locs = self.goals.unsqueeze(
             1)[:, :, :, :2] - self.locations.unsqueeze(
                 2)[:, :self.num_agents, :, :]
@@ -196,11 +189,10 @@ class GameModule(nn.Module):
                 torch.sum(torch.pow(goal_predictions - relative_goals, 2),
                           -1)))
 
-    """
-    Computes the total cost agents get from moving
-    """
-
     def compute_movement_cost(self, movements):
+        """
+        Computes the total cost agents get from moving
+        """
         return torch.sum(torch.sqrt(torch.sum(torch.pow(movements, 2), -1)))
 
     def get_avg_agent_to_goal_distance(self):

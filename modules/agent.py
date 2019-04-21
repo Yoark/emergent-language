@@ -2,21 +2,22 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from modules.processing import ProcessingModule
-from modules.goal_predicting import GoalPredictingProcessingModule
-from modules.action import ActionModule
-from modules.word_counting import WordCountingModule
-"""
-    The AgentModule is the general module that's responsible for the execution of
-    the overall policy throughout training. It holds all information pertaining to
-    the whole training episode, and at each forward pass runs a given game until
-    the end, returning the total cost all agents collected over the entire game
-"""
+from processing import ProcessingModule
+from goal_predicting import GoalPredictingProcessingModule
+from action import ActionModule
+from word_counting import WordCountingModule
 
 LOG = []
 
 
 class AgentModule(nn.Module):
+    """
+    The AgentModule is the general module that's responsible for the execution of
+    the overall policy throughout training. It holds all information pertaining to
+    the whole training episode, and at each forward pass runs a given game until
+    the end, returning the total cost all agents collected over the entire game
+    """
+
     def __init__(self, config):
         super(AgentModule, self).__init__()
         self.init_from_config(config)
@@ -114,7 +115,7 @@ class AgentModule(nn.Module):
 
     def forward(self, game):
         timesteps = []
-        for t in range(self.time_horizon):
+        for _t in range(self.time_horizon):
             movements = Variable(
                 self.Tensor(game.batch_size, game.num_entities,
                             self.movement_dim_size).zero_())
