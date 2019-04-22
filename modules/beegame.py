@@ -56,5 +56,8 @@ class BeeGameModule(GameModule):
 Each timestamp, scouts location updates, goal updates, accumulators location updates,
 goal updates, utterance might get updated,
 ! and a accrued cost for all games in the batch is computed
+! More cost computation methods:
+    -Compute the consensus loss of bee as negative sum of log 2norm distance between acquired goals of each pair of bees
+    -Compute the qulity loss as negative sum of log distance between best possible goal and each bees's goal.
 """
 
