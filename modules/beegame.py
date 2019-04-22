@@ -18,7 +18,7 @@ from modules.game import GameModule
     reward = alpha * num of swarm reach consensus + beta * the quality of location of
     the majority selected hive.
     scouts:
-        -movements 
+        -movements
         -utterances
         -predefined hive info
     accumulators:
@@ -57,3 +57,4 @@ Each timestamp, scouts location updates, goal updates, accumulators location upd
 goal updates, utterance might get updated,
 ! and a accrued cost for all games in the batch is computed
 """
+

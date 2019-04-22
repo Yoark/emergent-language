@@ -8,10 +8,12 @@ class WordCountingModule(nn.Module):
         self.oov_prob = config.oov_prob
         word_counts = Tensor(config.vocab_size)
         if config.use_cuda:
-            word_counts.cuda()
-        self.word_counts = Variable(word_counts)
+            word_counts = word_counts.cuda()
+        self.word_counts = word_counts
 
     def forward(self, utterances):
         cost = -(utterances/(self.oov_prob + self.word_counts.sum() - 1)).sum()
+        print(self.word_counts.size(), utterances.size())
         self.word_counts = self.word_counts + utterances
+
         return cost

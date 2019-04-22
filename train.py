@@ -51,7 +51,7 @@ def main():
     print(agent_config)
     agent = AgentModule(agent_config)
     if training_config.use_cuda:
-        agent.cuda()
+        agent = agent.cuda()
     optimizer = RMSprop(agent.parameters(), lr=training_config.learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
     losses = defaultdict(lambda:defaultdict(list))
@@ -62,7 +62,7 @@ def main():
         agent.reset()
         game = GameModule(game_config, num_agents, num_landmarks)
         if training_config.use_cuda:
-            game.cuda()
+            game = game.cuda()
         optimizer.zero_grad()
 
         total_loss, _ = agent(game)
