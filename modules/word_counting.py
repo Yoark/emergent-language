@@ -1,6 +1,7 @@
 import torch.nn as nn
 from torch import Tensor
 from torch.autograd import Variable
+import torch
 
 class WordCountingModule(nn.Module):
     def __init__(self, config):
@@ -13,7 +14,6 @@ class WordCountingModule(nn.Module):
 
     def forward(self, utterances):
         cost = -(utterances/(self.oov_prob + self.word_counts.sum() - 1)).sum()
-        print(self.word_counts.size(), utterances.size())
         self.word_counts = self.word_counts + utterances
 
         return cost

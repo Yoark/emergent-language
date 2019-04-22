@@ -45,7 +45,10 @@ class AgentModule(nn.Module):
     def reset(self):
         self.total_cost = torch.zeros_like(self.total_cost)
         if self.using_utterances and self.penalizing_words:
-            self.word_counter.word_counts = torch.zeros_like(self.word_counter.word_counts)
+            if self.using_cuda:
+                self.word_counter.word_counts = torch.zeros(self.vocab_size).cuda()
+            else:
+                self.word_counter.word_counts = torch.zeros(self.vocab_size)
 
     def train(self, mode=True):
         super(AgentModule, self).train(mode)
