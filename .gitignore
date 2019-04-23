@@ -8,5 +8,6 @@ mypy.ini
 *.pyc
 venv/
 docker/
-**.vscode/
+.vscode/
 **.DS_Store
+**.idea/
