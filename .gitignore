@@ -1,0 +1,14 @@
+.mypy_cache/
+.ropeproject/
+__pycache__/
+mypy.ini
+*.sw*
+*.pt
+*.out
+*.pyc
+venv/
+docker/
+.vscode/
+**.DS_Store
+**.idea/
+/*.gpg
