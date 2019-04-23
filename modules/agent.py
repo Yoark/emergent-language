@@ -153,6 +153,7 @@ class AgentModule(nn.Module):
                     timesteps[-1]['utterances'] = utterances
         # Compute the prob of each word being uttered
         import ipdb; ipdb.set_trace()
+        
         prob = self.word_counter.word_counts.sum((0,1))/(self.word_counter.oov_prob + self.word_counter.word_counts.sum()-1)
         # Compute reward using sum of prob based on utterances
         _, indices = utters.max(2)
