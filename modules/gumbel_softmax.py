@@ -14,5 +14,5 @@ class GumbelSoftmax(nn.Module):
             U = Variable(torch.rand(x.size()).cuda())
         else:
             U = Variable(torch.rand(x.size()))
-        y = x -torch.log(-torch.log(U + 1e-20) + 1e-20)
+        y = x - torch.log(-torch.log(U + 1e-20) + 1e-20)
         return self.softmax(y/self.temp)
