@@ -130,7 +130,7 @@ def main():
     print(agent_config)
     agent = AgentModule(agent_config)
     if training_config.use_cuda:
-        agent.cuda()
+        agent = agent.cuda()
     optimizer = RMSprop(agent.parameters(), lr=training_config.learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
     losses = defaultdict(lambda: defaultdict(list))
@@ -143,7 +143,7 @@ def main():
         agent.reset()
         game = GameModule(game_config, num_agents, num_landmarks)
         if training_config.use_cuda:
-            game.cuda()
+            game = game.cuda()
         optimizer.zero_grad()
 
         total_loss, _ = agent(game)
@@ -165,7 +165,6 @@ def main():
                 losses[game_config.max_agents][game_config.max_landmarks][-1])
 
     if training_config.save_model:
-        print(agent.LOG)
         torch.save(agent, training_config.save_model_file)
         print("Saved agent model weights at %s" %
               training_config.save_model_file)

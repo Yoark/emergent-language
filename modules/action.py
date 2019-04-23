@@ -44,6 +44,7 @@ class ActionModule(nn.Module):
         movement = self.movement_chooser(processed)
         if self.using_utterances:
             utter = self.utterance_chooser(processed)
+            # import ipdb; ipdb.set_trace()
             if training:
                 utterance = self.gumbel_softmax(utter)
             else:

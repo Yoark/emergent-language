@@ -59,6 +59,7 @@ ProcessingModuleConfig = NamedTuple('ProcessingModuleConfig', [
     ])
 
 WordCountingModuleConfig = NamedTuple('WordCountingModuleConfig', [
+    ('batch_size', int),
     ('vocab_size', int),
     ('oov_prob', float),
     ('use_cuda', bool)
@@ -108,6 +109,7 @@ default_training_config = TrainingConfig(
         use_cuda=False)
 
 default_word_counter_config = WordCountingModuleConfig(
+        batch_size=DEFAULT_BATCH_SIZE,
         vocab_size=DEFAULT_VOCAB_SIZE,
         oov_prob=DEFAULT_OOV_PROB,
         use_cuda=False)
@@ -196,6 +198,7 @@ def get_game_config(kwargs):
             )
 
 def get_agent_config(kwargs):
+    batch_size = kwargs['batch_size'] or DEFAULT_BATCH_SIZE
     vocab_size = kwargs['vocab_size'] or DEFAULT_VOCAB_SIZE
     use_utterances = (not kwargs['no_utterances'])
     use_cuda = kwargs['use_cuda']
@@ -221,6 +224,7 @@ def get_agent_config(kwargs):
             use_utterances=use_utterances,
             use_cuda=use_cuda)
     word_counter = WordCountingModuleConfig(
+            batch_size=batch_size,
             vocab_size=vocab_size,
             oov_prob=oov_prob,
             use_cuda=use_cuda)
