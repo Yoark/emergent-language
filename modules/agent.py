@@ -97,7 +97,10 @@ class AgentModule(nn.Module):
             utterances[:,agent,:] = utterance
 
     def forward(self, game):
-        timesteps = []
+        timesteps = []        
+        utters = torch.zeros(game.batch_size, game.num_agents, self.vocab_size)
+        if self.using_cuda:
+            utters = utters.cuda()
         for t in range(self.time_horizon):
             movements = Variable(self.Tensor(game.batch_size, game.num_entities, self.movement_dim_size).zero_())
             utterances = None
@@ -113,9 +116,10 @@ class AgentModule(nn.Module):
 
             cost = game(movements, goal_predictions, utterances)
             if self.penalizing_words:
-                cost = cost + self.word_counter(utterances)
-
-            self.total_cost = self.total_cost + cost
+                self.word_counter(utterances)
+                utters = torch.cat((utters, utterances), 0)
+            self.total_cost += cost
+#            self.total_cost = self.total_cost + cost
             if not self.training:
                 timesteps.append({
                     'locations': game.locations,
@@ -123,4 +127,11 @@ class AgentModule(nn.Module):
                     'loss': cost})
                 if self.using_utterances:
                     timesteps[-1]['utterances'] = utterances
+        # Compute the prob of each word being uttered
+        import ipdb; ipdb.set_trace()
+        prob = self.word_counter.word_counts.sum((0,1))/(self.word_counter.oov_prob + self.word_counter.word_counts.sum()-1)
+        # Compute reward using sum of prob based on utterances
+        _, indices = utters.max(2)
+        voc_cost = -torch.log(prob[indices.view(-1)]).sum()
+        self.total_cost = self.total_cost + voc_cost
         return self.total_cost, timesteps
