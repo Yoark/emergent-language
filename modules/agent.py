@@ -2,12 +2,16 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from processing import ProcessingModule
-from goal_predicting import GoalPredictingProcessingModule
-from action import ActionModule
-from word_counting import WordCountingModule
-
-LOG = []
+from modules.processing import ProcessingModule
+from modules.goal_predicting import GoalPredictingProcessingModule
+from modules.action import ActionModule
+from modules.word_counting import WordCountingModule
+"""
+    The AgentModule is the general module that's responsible for the execution of
+    the overall policy throughout training. It holds all information pertaining to
+    the whole training episode, and at each forward pass runs a given game until
+    the end, returning the total cost all agents collected over the entire game
+"""
 
 
 class AgentModule(nn.Module):
@@ -50,8 +54,10 @@ class AgentModule(nn.Module):
     def reset(self):
         self.total_cost = torch.zeros_like(self.total_cost)
         if self.using_utterances and self.penalizing_words:
-            self.word_counter.word_counts = torch.zeros_like(
-                self.word_counter.word_counts)
+            word_counts = torch.zeros_like(self.word_counter.word_counts)
+            if self.using_cuda:
+                word_counts = word_counts.cuda()
+            self.word_counter.word_counts = word_counts
 
     def train(self, mode=True):
         super(AgentModule, self).train(mode)
@@ -115,7 +121,7 @@ class AgentModule(nn.Module):
 
     def forward(self, game):
         timesteps = []
-        for _t in range(self.time_horizon):
+        for t in range(self.time_horizon):
             movements = Variable(
                 self.Tensor(game.batch_size, game.num_entities,
                             self.movement_dim_size).zero_())
@@ -136,11 +142,9 @@ class AgentModule(nn.Module):
                 self.get_action(game, agent, physical_feat, utterance_feat,
                                 movements, utterances)
 
-            global LOG
-            LOG.append([movements, goal_predictions, utterances])
             cost = game(movements, goal_predictions, utterances)
             if self.penalizing_words:
-                cost = cost + self.word_counter(utterances)
+                cost = cost + self.word_counter(utterances, t)
 
             self.total_cost = self.total_cost + cost
             if not self.training:
