@@ -13,9 +13,6 @@ from modules.word_counting import WordCountingModule
     the end, returning the total cost all agents collected over the entire game
 """
 
-LOG = []
-
-
 class AgentModule(nn.Module):
     def __init__(self, config):
         super(AgentModule, self).__init__()
@@ -49,15 +46,10 @@ class AgentModule(nn.Module):
     def reset(self):
         self.total_cost = torch.zeros_like(self.total_cost)
         if self.using_utterances and self.penalizing_words:
-<<<<<<< HEAD
             if self.using_cuda:
                 self.word_counter.word_counts = torch.empty(self.vocab_size).cuda()
             else:
                 self.word_counter.word_counts = torch.empty(self.vocab_size)
-=======
-            self.word_counter.word_counts = torch.zeros_like(
-                self.word_counter.word_counts)
->>>>>>> 916c645c50edc3a0016287dfff130a02bbdb8230
 
     def train(self, mode=True):
         super(AgentModule, self).train(mode)
@@ -120,7 +112,7 @@ class AgentModule(nn.Module):
             utterances[:, agent, :] = utterance
 
     def forward(self, game):
-        timesteps = []        
+        timesteps = []
         utters = torch.zeros(game.batch_size, game.num_agents, self.vocab_size)
         if self.using_cuda:
             utters = utters.cuda()
@@ -145,8 +137,6 @@ class AgentModule(nn.Module):
                 self.get_action(game, agent, physical_feat, utterance_feat,
                                 movements, utterances)
 
-            global LOG
-            LOG.append([movements, goal_predictions, utterances])
             cost = game(movements, goal_predictions, utterances)
             if self.penalizing_words:
                 self.word_counter(utterances)
