@@ -1,5 +1,5 @@
 import torch.nn as nn
-from processing import ProcessingModule
+from modules.processing import ProcessingModule
 
 
 class GoalPredictingProcessingModule(nn.Module):

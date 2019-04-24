@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from processing import ProcessingModule
-from gumbel_softmax import GumbelSoftmax
+from modules.processing import ProcessingModule
+from modules.gumbel_softmax import GumbelSoftmax
 
 
 class ActionModule(nn.Module):

@@ -29,10 +29,11 @@ class WordCountingModule(nn.Module):
         alpha = self.oov_prob
         self.word_counts = self.word_counts + indicator
         prob_ck = self.word_counts / (alpha + n - 1)
+        import ipdb; ipdb.set_trace()
         reward = 0
         batch = 0
         for agent_idx in indices:
             for _index in agent_idx:
                 reward += torch.log(prob_ck[batch, _index])
             batch += 1
-        return -reward
+        return -reward, prob_ck

@@ -135,13 +135,13 @@ class GameModule(nn.Module):
             1) - agent_baselines.unsqueeze(2)
         new_obs = self.goals[:, :, :2] - agent_baselines
         goal_agents = self.goals[:, :, 2].unsqueeze(2)
-        print('self.goals.shape: {}'.format(self.goals.shape))
-        print('new_obs.shape: {}'.format(new_obs.shape))
-        print('goal_agents.shape: {}'.format(goal_agents.shape))
+        # print('self.goals.shape: {}'.format(self.goals.shape))
+        # print('new_obs.shape: {}'.format(new_obs.shape))
+        # print('goal_agents.shape: {}'.format(goal_agents.shape))
 
         self.observed_goals = torch.cat((new_obs, goal_agents), dim=2)
-        print('self.observed_goals.shape: {}'.format(
-            self.observed_goals.shape))
+        # print('self.observed_goals.shape: {}'.format(
+            # self.observed_goals.shape))
         if self.using_utterances:
             self.utterances = utterances
             return self.compute_cost(movements, goal_predictions, utterances)

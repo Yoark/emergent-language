@@ -121,6 +121,8 @@ class AgentModule(nn.Module):
 
     def forward(self, game):
         timesteps = []
+        if self.using_cuda:
+            utters =  torch.zeros(game.batch_size, game.num_agents, self.vocab_size).cuda()
         for t in range(self.time_horizon):
             movements = Variable(
                 self.Tensor(game.batch_size, game.num_entities,
@@ -141,10 +143,12 @@ class AgentModule(nn.Module):
                     game, agent, goal_predictions)
                 self.get_action(game, agent, physical_feat, utterance_feat,
                                 movements, utterances)
-
+            
+            utters = torch.cat((utters, utterances), 0)
             cost = game(movements, goal_predictions, utterances)
             if self.penalizing_words:
-                cost = cost + self.word_counter(utterances, t)
+                pe_cost, prob = self.word_counter(utterances, t)
+                cost = cost + pe_cost
 
             self.total_cost = self.total_cost + cost
             if not self.training:
@@ -155,4 +159,9 @@ class AgentModule(nn.Module):
                 })
                 if self.using_utterances:
                     timesteps[-1]['utterances'] = utterances
-        return self.total_cost, timesteps
+            _, indices = utters.max(2)
+            # from collections import Counter
+            # counter = Counter(indices.view(-1).tolist())
+            # num_utters = len(counter.keys())
+            num_utters = len(torch.unique(indices))
+        return self.total_cost, timesteps, num_utters, prob

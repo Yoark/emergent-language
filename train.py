@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from modules.agent import AgentModule
 from modules.game import GameModule
-
+import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(
     description="Trains the agents for cooperative communication task")
 parser.add_argument(
@@ -138,6 +138,8 @@ def main():
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
     losses = defaultdict(lambda: defaultdict(list))
     dists = defaultdict(lambda: defaultdict(list))
+    utter_sizes = []
+    prob_vocs = []
     for epoch in range(training_config.num_epochs):
         num_agents = np.random.randint(game_config.min_agents,
                                        game_config.max_agents + 1)
@@ -149,7 +151,12 @@ def main():
             game = game.cuda()
         optimizer.zero_grad()
 
-        total_loss, _ = agent(game)
+        total_loss, _ ,num_utters, prob_voc = agent(game)
+        # keep track the utter_size change and prob of using each utterance.
+        utter_sizes.append(num_utters)
+        prob_vocs.append(prob_voc)
+        # plt.bar(range(len()), prob_voc)
+
         per_agent_loss = total_loss.data[
             0] / num_agents / game_config.batch_size
         losses[num_agents][num_landmarks].append(per_agent_loss)
@@ -171,6 +178,8 @@ def main():
         torch.save(agent, training_config.save_model_file)
         print("Saved agent model weights at %s" %
               training_config.save_model_file)
+
+    return utter_sizes, prob_vocs
     """
     import code
     code.interact(local=locals())
@@ -178,4 +187,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    utter_sizes, prob_vocs = main()
+    plt.plot(torch.arange(len(utter_sizes)).tolist(), utter_sizes)
+    plt.savefig('utter.png')
