@@ -164,7 +164,7 @@ def main():
                 losses[game_config.max_agents][game_config.max_landmarks][-1])
 
     if training_config.save_model:
-        print(agent.LOG)
+        #print(agent.LOG)
         torch.save(agent, training_config.save_model_file)
         print("Saved agent model weights at %s" %
               training_config.save_model_file)

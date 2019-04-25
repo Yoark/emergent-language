@@ -152,9 +152,9 @@ class AgentModule(nn.Module):
                 if self.using_utterances:
                     timesteps[-1]['utterances'] = utterances
         # Compute the prob of each word being uttered
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         
-        prob = self.word_counter.word_counts.sum((0,1))/(self.word_counter.oov_prob + self.word_counter.word_counts.sum()-1)
+        prob = self.word_counter.word_counts/(self.word_counter.oov_prob + self.word_counter.word_counts.sum()-1)
         # Compute reward using sum of prob based on utterances
         _, indices = utters.max(2)
         voc_cost = -torch.log(prob[indices.view(-1)]).sum()
