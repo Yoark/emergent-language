@@ -24,10 +24,8 @@ class WordCountingModule(nn.Module):
         if self.use_cuda:
             indicator = indicator.cuda()
         
-        for agent_idx in indices:
-            for _index in agent_idx:
-                indicator[_index] += 1
-        
+        for _index in indices.view(-1):
+            indicator[_index] += 1
         # assume agents make an utterance each time step
         self.word_counts = self.word_counts + indicator
         #self.word_counts = self.word_counts + utterances

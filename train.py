@@ -134,6 +134,9 @@ def main():
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
     losses = defaultdict(lambda: defaultdict(list))
     dists = defaultdict(lambda: defaultdict(list))
+
+    num_utters = []
+
     for epoch in range(training_config.num_epochs):
         num_agents = np.random.randint(game_config.min_agents,
                                        game_config.max_agents + 1)
@@ -145,7 +148,9 @@ def main():
             game = game.cuda()
         optimizer.zero_grad()
 
-        total_loss, _ = agent(game)
+        total_loss, _ ,num_utter= agent(game)
+        num_utters.append(num_utter)
+
         per_agent_loss = total_loss.data[
             0] / num_agents / game_config.batch_size
         losses[num_agents][num_landmarks].append(per_agent_loss)
@@ -172,7 +177,12 @@ def main():
     import code
     code.interact(local=locals())
     """
+    return num_utters
 
 
 if __name__ == "__main__":
-    main()
+    num_utters = main()
+    import matplotlib.pyplot as plt
+    
+    plt.plot(torch.arange(len(num_utters)).tolist(), num_utters)
+    plt.savefig("test.png")
