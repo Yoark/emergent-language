@@ -114,6 +114,7 @@ class AgentModule(nn.Module):
     def forward(self, game):
         timesteps = []
         utters = []
+        utters_nums_t = []
         for t in range(self.time_horizon):
             movements = Variable(
                 self.Tensor(game.batch_size, game.num_entities,
@@ -139,6 +140,8 @@ class AgentModule(nn.Module):
             if self.penalizing_words:
                 self.word_counter(utterances)
                 utters.append(utterances)
+                _, ids = utterances.view(-1, self.vocab_size).max(1)
+                utters_nums_t.append(len(torch.unique(ids.view(-1))))
             self.total_cost += cost
 #            self.total_cost = self.total_cost + cost
             if not self.training:
@@ -161,4 +164,4 @@ class AgentModule(nn.Module):
         self.total_cost = self.total_cost + voc_cost
         
         num_utters = len(torch.unique(indices))
-        return self.total_cost, timesteps, num_utters
+        return self.total_cost, timesteps, num_utters, utters_nums_t

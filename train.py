@@ -136,6 +136,7 @@ def main():
     dists = defaultdict(lambda: defaultdict(list))
 
     num_utters = []
+    utter_times = []
 
     for epoch in range(training_config.num_epochs):
         num_agents = np.random.randint(game_config.min_agents,
@@ -148,15 +149,15 @@ def main():
             game = game.cuda()
         optimizer.zero_grad()
 
-        total_loss, _ ,num_utter= agent(game)
+        total_loss, _ ,num_utter, utter_num_t = agent(game)
         num_utters.append(num_utter)
+        utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
 
-        per_agent_loss = total_loss.data[
-            0] / num_agents / game_config.batch_size
+        per_agent_loss = total_loss.item() / num_agents / game_config.batch_size
         losses[num_agents][num_landmarks].append(per_agent_loss)
 
         dist = game.get_avg_agent_to_goal_distance()
-        avg_dist = dist.data / num_agents / game_config.batch_size
+        avg_dist = dist.item() / num_agents / game_config.batch_size
         dists[num_agents][num_landmarks].append(avg_dist)
 
         print_losses(epoch, losses, dists, game_config)
@@ -177,12 +178,14 @@ def main():
     import code
     code.interact(local=locals())
     """
-    return num_utters
+    return num_utters, utter_times
 
 
 if __name__ == "__main__":
-    num_utters = main()
+    num_utters, utter_num_t = main()
     import matplotlib.pyplot as plt
-    
+
     plt.plot(torch.arange(len(num_utters)).tolist(), num_utters)
-    plt.savefig("test.png")
+    plt.savefig("num_per_epoch.png")
+    plt.plot(torch.arange(len(utter_num_t)).tolist(), utter_num_t)
+    plt.savefig("num_per_timestamp.png")
