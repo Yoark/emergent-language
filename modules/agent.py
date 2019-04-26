@@ -162,10 +162,11 @@ class AgentModule(nn.Module):
         prob = self.word_counter.word_counts / (
             self.word_counter.oov_prob + self.word_counter.word_counts.sum() -
             1)
+        
         # Compute reward using sum of prob based on utterances
         _, indices = utters.max(2)
         voc_cost = -torch.log(prob[indices.view(-1)]).sum()
         self.total_cost += voc_cost
 
         num_utters = len(torch.unique(indices))
-        return self.total_cost, timesteps, num_utters, utters_nums_t
+        return self.total_cost, timesteps, num_utters, utters_nums_t, prob
