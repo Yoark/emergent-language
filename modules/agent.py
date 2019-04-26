@@ -13,6 +13,7 @@ from modules.word_counting import WordCountingModule
     the end, returning the total cost all agents collected over the entire game
 """
 
+
 class AgentModule(nn.Module):
     def __init__(self, config):
         super(AgentModule, self).__init__()
@@ -47,9 +48,10 @@ class AgentModule(nn.Module):
         self.total_cost = torch.zeros_like(self.total_cost)
         if self.using_utterances and self.penalizing_words:
             if self.using_cuda:
-                self.word_counter.word_counts = torch.empty(self.vocab_size).cuda()
+                self.word_counter.word_counts = torch.zeros(
+                    self.vocab_size).cuda()
             else:
-                self.word_counter.word_counts = torch.empty(self.vocab_size)
+                self.word_counter.word_counts = torch.zeros(self.vocab_size)
 
     def train(self, mode=True):
         super(AgentModule, self).train(mode)
@@ -137,13 +139,14 @@ class AgentModule(nn.Module):
                                 movements, utterances)
 
             cost = game(movements, goal_predictions, utterances)
+            self.total_cost += cost
+
             if self.penalizing_words:
                 self.word_counter(utterances)
                 utters.append(utterances)
                 _, ids = utterances.view(-1, self.vocab_size).max(1)
                 utters_nums_t.append(len(torch.unique(ids.view(-1))))
-            self.total_cost += cost
-#            self.total_cost = self.total_cost + cost
+
             if not self.training:
                 timesteps.append({
                     'locations': game.locations,
@@ -153,15 +156,16 @@ class AgentModule(nn.Module):
                 if self.using_utterances:
                     timesteps[-1]['utterances'] = utterances
         # Compute the prob of each word being uttered
-        #import ipdb; ipdb.set_trace()
         utters = torch.cat(utters, 0)
         if self.using_cuda:
             utters = utters.cuda()
-        prob = self.word_counter.word_counts/(self.word_counter.oov_prob + self.word_counter.word_counts.sum()-1)
+        prob = self.word_counter.word_counts / (
+            self.word_counter.oov_prob + self.word_counter.word_counts.sum() -
+            1)
         # Compute reward using sum of prob based on utterances
         _, indices = utters.max(2)
         voc_cost = -torch.log(prob[indices.view(-1)]).sum()
-        self.total_cost = self.total_cost + voc_cost
-        
+        self.total_cost += voc_cost
+
         num_utters = len(torch.unique(indices))
         return self.total_cost, timesteps, num_utters, utters_nums_t
