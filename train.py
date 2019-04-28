@@ -149,9 +149,13 @@ def main():
             game = game.cuda()
         optimizer.zero_grad()
 
-        total_loss, _ ,num_utter, utter_num_t = agent(game)
+        total_loss, _ ,num_utter, utter_num_t, prob= agent(game)
         num_utters.append(num_utter)
         utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
+
+        if epoch % 5 ==0:
+            print(prob)
+        #import ipdb; ipdb.set_trace()
 
         per_agent_loss = total_loss.item() / num_agents / game_config.batch_size
         losses[num_agents][num_landmarks].append(per_agent_loss)
@@ -178,6 +182,7 @@ def main():
     import code
     code.interact(local=locals())
     """
+    
     return num_utters, utter_times
 
 
