@@ -99,7 +99,6 @@ class AgentModule(nn.Module):
             for other_agent in range(game.num_agents):
                 self.process_utterances(game, agent, other_agent,
                                         utterance_processes, goal_predictions)
-            import ipdb; ipdb.set_trace()                            
             return self.utterance_pooling(utterance_processes)
         else:
             return None
@@ -136,7 +135,6 @@ class AgentModule(nn.Module):
                 physical_feat = self.get_physical_feat(game, agent)
                 utterance_feat = self.get_utterance_feat(
                     game, agent, goal_predictions)
-                import ipdb; ipdb.set_trace()
                 self.get_action(game, agent, physical_feat, utterance_feat,
                                 movements, utterances)
 
