@@ -153,7 +153,7 @@ def main():
         num_utters.append(num_utter)
         utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
 
-        if epoch % 5 ==0:
+        if epoch % 10 ==0:
             print(prob)
         #import ipdb; ipdb.set_trace()
 
