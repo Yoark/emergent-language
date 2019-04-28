@@ -36,8 +36,10 @@ class ActionModule(nn.Module):
 
     def forward(self, physical, goal, mem, training, utterance=None):
         goal_processed, _ = self.goal_processor(goal, mem)
+        # utterance size (1, config.feat_vec_size)
         if self.using_utterances:
             x = torch.cat([physical.squeeze(1), utterance.squeeze(1), goal_processed], 1).squeeze(1)
+            import ipdb; ipdb.set_trace()
         else:
             x = torch.cat([physical.squeeze(0), goal_processed], 1).squeeze(1)
         processed, mem = self.processor(x, mem)
