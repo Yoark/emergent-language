@@ -32,7 +32,7 @@ def _update(t):
     # utterances = t['utterances'][batch]
 
 
-def animate(timesteps):
+def animate(timesteps, output_filename):
     anim = animation.FuncAnimation(
         fig, _update, frames=timesteps, repeat=False, interval=1000)
-    anim.save('epoch_animation.mp4')
+    anim.save(output_filename)
