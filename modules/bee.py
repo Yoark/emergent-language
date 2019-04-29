@@ -7,6 +7,8 @@ from modules.goal_predicting import GoalPredictingProcessingModule
 from modules.action import ActionModule
 from modules.word_counting import WordCountingModule
 from modules.agent import AgentModule
+from .swarm_action import SwarmActModule
+from .scout_action import ScoutActModule
 
 """ Swarm action defining"""
 
@@ -30,8 +32,8 @@ class BeeModule(AgentModule):
 
     def scouts_get_action(self,game, agent, physical_feat, utterance_feat,
                          movements, utterances, votes):
-        vote, movement, utterance, new_men = self.scout_action_processor(physical_feat
-                                             utterances, game.memories["action"][:, agent],
+        vote, movement, utterance, new_men = self.scout_action_processor(physical_feat, utterance_feat,
+                                             game.memories["action"][:, agent],
                                              self.training)
         self.update_mem(game, "action", new_mem, agent)
         movements[:, agent, :] = movement
@@ -57,11 +59,19 @@ class BeeModule(AgentModule):
                                 self.hive_num, require_grad=True)
             utterances = self.Tensor(game.batch_size, game.num_agents,
                                      self.vocab_size, require_grad=True)
+            movements = self.Tensor(game.batch_size, game.num_entities, 
+                                    self.movement_dim_size, required_grad=True).zero_()
+
             for agent in range(game.num_agents):
                 utterance_feat = self.get_utterance_feat(game, agent)
+                physical_feat = self.get_physical_feat(game, agent)
+                # Divide the utterances, movement to two divisions or not?
                 self.swarm_get_action(game, agent, utterance_feat, votes)
+                self.scouts_get_action(game, agent, physical_feat, utterance_feat, 
+                                       movements, utterances, votes)
 
-            cost = game(votes)
+
+            cost = game(votes, movements, utterances)
             self.total_cost += cost
 
             if self.penalizing_words:
