@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch import Tensor
 from torch.autograd import Variable
 """
     The GameModule takes in all actions(movement, utterance, goal prediction)
@@ -65,7 +64,8 @@ class GameModule(nn.Module):
 
         #TODO: Bad for loop?
         for b in range(self.batch_size):
-            goal_agents[b] = torch.randperm(self.num_agents).view(self.num_agents, -1)
+            goal_agents[b] = torch.randperm(self.num_agents).view(
+                self.num_agents, -1)
 
         for b in range(self.batch_size):
             goal_locations[b] = self.locations.data[b][

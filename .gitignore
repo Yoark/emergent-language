@@ -12,3 +12,4 @@ docker/
 **.DS_Store
 **.idea/
 /*.gpg
+*.code-workspace
