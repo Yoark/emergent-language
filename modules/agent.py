@@ -147,14 +147,13 @@ class AgentModule(nn.Module):
                 _, ids = utterances.view(-1, self.vocab_size).max(1)
                 utters_nums_t.append(len(torch.unique(ids.view(-1))))
 
-            if not self.training:
-                timesteps.append({
-                    'locations': game.locations,
-                    'movements': movements,
-                    'loss': cost
-                })
-                if self.using_utterances:
-                    timesteps[-1]['utterances'] = utterances
+            timesteps.append({
+                'locations': game.locations,
+                'movements': movements,
+                'loss': cost
+            })
+            if self.using_utterances:
+                timesteps[-1]['utterances'] = utterances
         # Compute the prob of each word being uttered
         utters = torch.cat(utters, 0)
         if self.using_cuda:
@@ -162,7 +161,7 @@ class AgentModule(nn.Module):
         prob = self.word_counter.word_counts / (
             self.word_counter.oov_prob + self.word_counter.word_counts.sum() -
             1)
-        
+
         # Compute reward using sum of prob based on utterances
         _, indices = utters.max(2)
         voc_cost = -torch.log(prob[indices.view(-1)]).sum()
