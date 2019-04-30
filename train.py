@@ -1,12 +1,15 @@
 import argparse
+from collections import defaultdict
+
 import numpy as np
 import torch
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 import configs
+from animate_epoch import animate
 from modules.agent import AgentModule
 from modules.game import GameModule
-from collections import defaultdict
 
 parser = argparse.ArgumentParser(
     description="Trains the agents for cooperative communication task")
@@ -149,15 +152,18 @@ def main():
             game = game.cuda()
         optimizer.zero_grad()
 
-        total_loss, _ ,num_utter, utter_num_t, prob= agent(game)
+        total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
+        output_filename = 'epoch_{}_animation.mp4'.format(epoch)
+        animate(timesteps, output_filename, num_agents)
+
         num_utters.append(num_utter)
         utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
 
-        if epoch % 10 ==0:
+        if epoch % 10 == 0:
             print(prob)
-        #import ipdb; ipdb.set_trace()
 
-        per_agent_loss = total_loss.item() / num_agents / game_config.batch_size
+        per_agent_loss = total_loss.item(
+        ) / num_agents / game_config.batch_size
         losses[num_agents][num_landmarks].append(per_agent_loss)
 
         dist = game.get_avg_agent_to_goal_distance()
@@ -182,15 +188,9 @@ def main():
     import code
     code.interact(local=locals())
     """
-    
+
     return num_utters, utter_times
 
 
 if __name__ == "__main__":
     num_utters, utter_num_t = main()
-    import matplotlib.pyplot as plt
-
-    plt.plot(torch.arange(len(num_utters)).tolist(), num_utters)
-    plt.savefig("num_per_epoch.png")
-    plt.plot(torch.arange(len(utter_num_t)).tolist(), utter_num_t)
-    plt.savefig("num_per_timestamp.png")

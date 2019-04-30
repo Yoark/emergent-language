@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch import Tensor
 from torch.autograd import Variable
 """
     The GameModule takes in all actions(movement, utterance, goal prediction)
@@ -65,59 +64,50 @@ class GameModule(nn.Module):
 
         #TODO: Bad for loop?
         for b in range(self.batch_size):
-            goal_agents[b] = torch.randperm(self.num_agents).view(self.num_agents, -1)
+            goal_agents[b] = torch.randperm(self.num_agents).view(
+                self.num_agents, -1)
 
         for b in range(self.batch_size):
             goal_locations[b] = self.locations.data[b][
                 goal_entities[b].squeeze()]
 
         # [batch_size, num_agents, 3]
+
+        self.goal_entities = Variable(goal_entities)
         self.goals = Variable(torch.cat((goal_locations, goal_agents), 2))
         goal_agents = Variable(goal_agents)
 
+        physical_memories = torch.zeros(self.batch_size, self.num_agents,
+                                        self.num_entities, config.memory_size)
+
+        action_memories = torch.zeros(self.batch_size, self.num_agents,
+                                      config.memory_size)
         if self.using_cuda:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size).cuda()),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size).cuda())
-            }
-        else:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size)),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size))
-            }
+            physical_memories = physical_memories.cuda()
+            action_memories = action_memories.cuda()
+
+        self.memories = {
+            "physical": Variable(physical_memories),
+            "action": Variable(action_memories)
+        }
 
         if self.using_utterances:
+            utterances = torch.zeros(self.batch_size, self.num_agents,
+                                     config.vocab_size)
+            utterance_memories = torch.zeros(self.batch_size, self.num_agents,
+                                             self.num_agents,
+                                             config.memory_size)
             if self.using_cuda:
-                self.utterances = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size).cuda())
-                self.memories["utterance"] = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size).cuda())
-            else:
-                self.utterances = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size))
-                self.memories["utterance"] = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size))
+                utterances = utterances.cuda()
+                utterance_memories = utterance_memories.cuda()
+            self.utterances = Variable(utterances)
+            self.memories["utterance"] = Variable(utterance_memories)
 
         agent_baselines = self.locations[:, :self.num_agents, :]
 
         sort_idxs = torch.sort(self.goals[:, :, 2])[1]
         self.sorted_goals = Variable(self.Tensor(self.goals.size()))
+
         # TODO: Bad for loop?
         for b in range(self.batch_size):
             self.sorted_goals[b] = self.goals[b][sort_idxs[b]]
