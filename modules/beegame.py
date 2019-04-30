@@ -46,16 +46,16 @@ from modules.game import GameModule
 
 class BeeGameModule(GameModule):
 
-    def __init__(self, config, num_swarms, num_scouts, num_hives):
+    def __init__(self, config, num_swarm, num_scouts, num_hives):
         super().__init__()
 
         self.batch_size = config.batch_size
         self.using_cuda = config.use_cuda
-        self.num_swarms = num_swarms
+        self.num_swarm = num_swarm
         self.num_scouts = num_scouts
         self.num_hives = num_hives
-        self.num_entities = self.num_swarms + self.num_scouts + self.num_hives
-        self.num_agents = self.num_swarms + self.num_scouts
+        self.num_entities = self.num_swarm + self.num_scouts + self.num_hives
+        self.num_agents = self.num_swarm + self.num_scouts
         if self.using_cuda:
             self.Tensor = torch.cuda.FloatTensor
         else:
@@ -64,35 +64,39 @@ class BeeGameModule(GameModule):
                                2) * config.world_dim
 
         #! where to fit hive num in and where to fit hive locations in
-        hives = (torch.rand(self.batch_size, self.num_agents, 1)*config.num_hives).floor()
-        hive_value = torch.rand(self.batch_size, self.num_hives, 1)
+        #!hives = (torch.rand(self.batch_size, self.num_agents, 1)*config.num_hives).floor()
+        #!hive_value = torch.rand(self.batch_size, self.num_hives, 1)
+
+        votes = torch.zeros(self.batch_size, self.num_agents,config.num_swarm)
+        if self.using_cuda:
+            votes = votes.cuda()
+        self.votes = Variable(votes)
+
+        #? the goal hive location label
+        """ goal_entities = (torch.rand(self.batch_size, self.num_agents, 1)*
+                        self.num_hives).floor().long() """
+        """ goal_locations = self.Tensor(self.batch_size, self.num_agents, 2)
+        #? the agent label
+        goal_agents = self.Tensor(self.batch_size, self.num_agents, 1) """
+
+        if self.using_cuda:
+            locations = locations.cuda()
+            # hives = hives.cuda()
+            # goal_entities = goal_entities.cuda()
+
+        self.locations = Variable(locations)
+        # self.hives = hives.float()
 
         
-        #? the goal hive location label
-        goal_entities = (torch.rand(self.batch_size, self.num_agents, 1)*
-                        self.num_hives).floor().long()
-        goal_locations = self.Tensor(self.batch_size, self.num_agents, 2)
-
-        #? the agent label
-        goal_agents = self.Tensor(self.batch_size, self.num_agents, 1)
-        if using_cuda:
-            locations = locations.cuda()
-            hives = hives.cuda()
-            goal_entities = goal_entities.cuda()
-
-        self.locations = locations.require_grad_()
-        self.hives = hives.float()
-
-        #? set goals for swarms and scouts
-        for b in range(self.batch_size):
+"""         for b in range(self.batch_size):
             goal_agents[b] = torch.randperm(self.num_agents).view(self.num_agents, -1)
 
         for b in range(self.batch_size):
-            goal_locations[b] = self.locations[b][goal_entities[b].squeeze()]
+            goal_locations[b] = self.locations[b][goal_entities[b].squeeze()] """
 
         #? cat goal labels with its initial goal coordinates.
-        self.goals = torch.cat((goal_locations, goal_agents), 2).requires_grad()
-        goal_agents.requires_grad_()
+"""         self.goals = torch.cat((goal_locations, goal_agents), 2).requires_grad()
+        goal_agents.requires_grad_() """
         #? mem unchanged
         if self.using_cuda:
             self.memories = {
@@ -124,21 +128,27 @@ class BeeGameModule(GameModule):
                     torch.zeros(self.batch_size, self.num_agents,
                                 self.num_agents, config.memory_size)
             }
-        if self.using_cuda:
-            self.utterances = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size).cuda())
-                self.memories["utterance"] = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size).cuda())
+        if self.using_utterances:
+            utterances = torch.zeros(self.batch_size, self.num_agents,
+                                    config.vocab_size)
+            utterances_memories = torch.zeros(self.batch_size, self.num_agents,
+                            self.num_agents, config.memory_size)
+            if self.using_cuda:
+                utterances = utterances.cuda()
+                utterances_memories = utterances_memories.cuda()
+            self.utterances = Variable(utterances)
+            self.memories["utterance"] = Variable(utterances_memories)
+
+
+
         #? Compute current observations of relative coordinates got from agents
         #? batch, agent, other_agent, 2
         agent_baselines = self.locations[:, :self.num_agent, :]
         #? just copy, it looks redundunct to me
         self.observations = self.locations.unsqueeze(1) - agent_baselines.unsqueeze(2)
 
-        new_obs = self.goals[:,:,:2] - agent_baselines
-        self.observed_goals = torch.cat((new_obs, goal_agents), dim=2)
+        #new_obs = self.goals[:,:,:2] - agent_baselines
+        #self.observed_goals = torch.cat((new_obs, goal_agents), dim=2)
 
 
 
@@ -160,9 +170,9 @@ goal updates, utterance might get updated,
             agent_baselines = self.locations[:, :self.num_agents]
             self.observations = self.locations.unsqueeze(
             1) - agent_baselines.unsqueeze(2)
-            new_obs = self.goals[:, :, :2] - agent_baselines
-            goal_agents = self.goals[:, :, 2].unsqueeze(2)
-            self.observed_goals = torch.cat((new_obs, goal_agents), 2)
+            #new_obs = self.goals[:, :, :2] - agent_baselines
+            #goal_agents = self.goals[:, :, 2].unsqueeze(2)
+            # self.observed_goals = torch.cat((new_obs, goal_agents), 2)
 
             self.utterances = utterances
             self.votes = votes
@@ -193,7 +203,7 @@ goal updates, utterance might get updated,
 
         def value(self):
             #? value = 1/square(distance to center of swarm times a constant)
-            swarm_center = torch.mean(self.locations[:, self.num_swarms, :], [1])
+            swarm_center = torch.mean(self.locations[:, self.num_swarm, :], [1])
             #! (batch, num_agents, 1)
             return torch.sum(torch.pow(1/(self.goal_locations - swarm_center.unsqueeze(1)), 2), 2)
 
