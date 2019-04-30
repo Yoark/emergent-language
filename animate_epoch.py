@@ -34,6 +34,9 @@ def _update(t):
 
 
 def animate(timesteps, output_filename):
+    global circles, count
+    circles = []
+    count = 0
     # only consider a particular batch
     batch = 99
     for timestep in timesteps:

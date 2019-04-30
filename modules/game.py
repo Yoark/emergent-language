@@ -72,6 +72,8 @@ class GameModule(nn.Module):
                 goal_entities[b].squeeze()]
 
         # [batch_size, num_agents, 3]
+
+        self.goal_entities = Variable(goal_entities)
         self.goals = Variable(torch.cat((goal_locations, goal_agents), 2))
         goal_agents = Variable(goal_agents)
 
@@ -118,6 +120,7 @@ class GameModule(nn.Module):
 
         sort_idxs = torch.sort(self.goals[:, :, 2])[1]
         self.sorted_goals = Variable(self.Tensor(self.goals.size()))
+
         # TODO: Bad for loop?
         for b in range(self.batch_size):
             self.sorted_goals[b] = self.goals[b][sort_idxs[b]]
