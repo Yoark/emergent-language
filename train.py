@@ -1,12 +1,15 @@
 import argparse
+from collections import defaultdict
+
 import numpy as np
 import torch
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 import configs
+from animate_epoch import animate
 from modules.agent import AgentModule
 from modules.game import GameModule
-from collections import defaultdict
 
 parser = argparse.ArgumentParser(
     description="Trains the agents for cooperative communication task")
@@ -150,16 +153,14 @@ def main():
         optimizer.zero_grad()
 
         total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
-        from animate_epoch import animate
         output_filename = 'epoch_{}_animation.mp4'.format(epoch)
-        animate(timesteps, output_filename)
+        animate(timesteps, output_filename, num_agents)
 
         num_utters.append(num_utter)
         utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
 
         if epoch % 10 == 0:
             print(prob)
-        #import ipdb; ipdb.set_trace()
 
         per_agent_loss = total_loss.item(
         ) / num_agents / game_config.batch_size

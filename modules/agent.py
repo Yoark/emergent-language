@@ -150,7 +150,10 @@ class AgentModule(nn.Module):
             timesteps.append({
                 'locations': game.locations,
                 'movements': movements,
-                'loss': cost
+                'loss': cost,
+                'goal_entities': game.goal_entities,
+                'physical': game.physical,
+                'sorted_goals': game.sorted_goals
             })
             if self.using_utterances:
                 timesteps[-1]['utterances'] = utterances

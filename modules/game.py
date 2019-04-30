@@ -77,44 +77,31 @@ class GameModule(nn.Module):
         self.goals = Variable(torch.cat((goal_locations, goal_agents), 2))
         goal_agents = Variable(goal_agents)
 
+        physical_memories = torch.zeros(self.batch_size, self.num_agents,
+                                        self.num_entities, config.memory_size)
+
+        action_memories = torch.zeros(self.batch_size, self.num_agents,
+                                      config.memory_size)
         if self.using_cuda:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size).cuda()),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size).cuda())
-            }
-        else:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size)),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size))
-            }
+            physical_memories = physical_memories.cuda()
+            action_memories = action_memories.cuda()
+
+        self.memories = {
+            "physical": Variable(physical_memories),
+            "action": Variable(action_memories)
+        }
 
         if self.using_utterances:
+            utterances = torch.zeros(self.batch_size, self.num_agents,
+                                     config.vocab_size)
+            utterance_memories = torch.zeros(self.batch_size, self.num_agents,
+                                             self.num_agents,
+                                             config.memory_size)
             if self.using_cuda:
-                self.utterances = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size).cuda())
-                self.memories["utterance"] = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size).cuda())
-            else:
-                self.utterances = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size))
-                self.memories["utterance"] = Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size))
+                utterances = utterances.cuda()
+                utterance_memories = utterance_memories.cuda()
+            self.utterances = Variable(utterances)
+            self.memories["utterance"] = Variable(utterance_memories)
 
         agent_baselines = self.locations[:, :self.num_agents, :]
 
