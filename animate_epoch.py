@@ -8,7 +8,7 @@ fig = plt.figure(figsize=(20, 20))
 plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
 fig.set_size_inches(20, 20)
 ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
-circles = []
+artists = []
 
 count = 0
 
@@ -24,12 +24,12 @@ def _update(t, num_agents):
             idx = idx.item()
         return 'C{}'.format(idx)
 
-    global circles
+    global artists
     global count
     ax.set_title('timestep: {}'.format(count), fontsize=16)
 
     count += 1
-    if not circles:
+    if not artists:
         for idx, loc in enumerate(locations):
             loc_list = loc.tolist()
             if idx < num_agents:
@@ -39,10 +39,17 @@ def _update(t, num_agents):
             else:
                 patch = patches.Rectangle(
                     loc_list, width=0.2, height=0.2, fc=get_color(idx))
-            circles.append(ax.add_patch(patch))
+            artists.append(ax.add_patch(patch))
     else:
-        for idx, circle in enumerate(circles):
-            circle.center = locations[idx].tolist()
+        for idx, artist in enumerate(artists):
+            loc_list = locations[idx].tolist()
+            if isinstance(artist, patches.Circle):
+                artist.set_center(loc_list)
+            elif isinstance(artist, patches.Rectangle):
+                artist.set_xy(loc_list)
+            else:
+                raise Exception("artist should be circle or rectangle")
+
     # movements = t['movements']
     # loss = t['loss']
     # utterances = t['utterances']
@@ -50,9 +57,9 @@ def _update(t, num_agents):
 
 
 def animate(timesteps, output_filename, num_agents):
-    global circles
+    global artists
     global count
-    circles = []
+    artists = []
     count = 0
     # only consider a particular batch
     batch = 99
