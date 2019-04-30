@@ -1,22 +1,24 @@
 import matplotlib.pyplot as plt
-from matplotlib import animation
+from matplotlib import animation, rcParams
 
 from configs import DEFAULT_WORLD_DIM
 
 colors = ['g', 'b', 'y', 'r'] * 4
 
-dpi = 300
-fig = plt.figure()
-fig.set_dpi(dpi)
-fig.set_size_inches(7, 6.5)
+fig = plt.figure(figsize=(20, 20))
+plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
+fig.set_size_inches(20, 20)
 ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
-plt.tight_layout()
 circles = []
+
+count = 0
 
 
 def _update(t):
     locations = t['locations']
-    global circles
+    global circles, count
+    ax.set_title('epoch: 0, timestep {}'.format(count), fontsize=16)
+    count += 1
     if not circles:
         circles = [
             ax.add_patch(plt.Circle(loc.tolist(), radius=0.3, fc=colors[idx]))
@@ -41,4 +43,5 @@ def animate(timesteps, output_filename):
 
     anim = animation.FuncAnimation(
         fig, _update, frames=timesteps, repeat=False)
-    anim.save(output_filename, dpi=dpi)
+    writer = animation.writers['ffmpeg'](fps=2)
+    anim.save(output_filename, writer=writer)

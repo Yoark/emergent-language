@@ -193,9 +193,3 @@ def main():
 
 if __name__ == "__main__":
     num_utters, utter_num_t = main()
-    import matplotlib.pyplot as plt
-
-    plt.plot(torch.arange(len(num_utters)).tolist(), num_utters)
-    plt.savefig("num_per_epoch.png")
-    plt.plot(torch.arange(len(utter_num_t)).tolist(), utter_num_t)
-    plt.savefig("num_per_timestamp.png")
