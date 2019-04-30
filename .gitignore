@@ -13,3 +13,5 @@ docker/
 **.idea/
 /*.gpg
 *.code-workspace
+*.png
+*.mp4

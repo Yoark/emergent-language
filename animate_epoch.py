@@ -3,21 +3,19 @@ from matplotlib import animation
 
 from configs import DEFAULT_WORLD_DIM
 
-# only consider a particular batch
-batch = 99
-
 colors = ['g', 'b', 'y', 'r'] * 4
 
+dpi = 300
 fig = plt.figure()
-fig.set_dpi(100)
+fig.set_dpi(dpi)
 fig.set_size_inches(7, 6.5)
 ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
-
+plt.tight_layout()
 circles = []
 
 
 def _update(t):
-    locations = t['locations'][batch]
+    locations = t['locations']
     global circles
     if not circles:
         circles = [
@@ -27,12 +25,20 @@ def _update(t):
     else:
         for idx, circle in enumerate(circles):
             circle.center = locations[idx].tolist()
-    # movements = t['movements'][batch]
+    # movements = t['movements']
     # loss = t['loss']
-    # utterances = t['utterances'][batch]
+    # utterances = t['utterances']
+    # TODO: get agent goals
 
 
 def animate(timesteps, output_filename):
+    # only consider a particular batch
+    batch = 99
+    for timestep in timesteps:
+        timestep['movements'] = timestep['movements'][batch]
+        timestep['utterances'] = timestep['utterances'][batch]
+        timestep['locations'] = timestep['locations'][batch]
+
     anim = animation.FuncAnimation(
-        fig, _update, frames=timesteps, repeat=False, interval=1000)
-    anim.save(output_filename)
+        fig, _update, frames=timesteps, repeat=False)
+    anim.save(output_filename, dpi=dpi)

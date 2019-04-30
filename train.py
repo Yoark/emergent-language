@@ -151,7 +151,8 @@ def main():
 
         total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
         from animate_epoch import animate
-        animate(timesteps)
+        output_filename = 'epoch_{}_animation.mp4'.format(epoch)
+        animate(timesteps, output_filename)
 
         num_utters.append(num_utter)
         utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
