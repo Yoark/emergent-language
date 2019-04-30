@@ -46,45 +46,51 @@ from modules.game import GameModule
 
 class BeeGameModule(GameModule):
 
-    def __init__(self, config, num_swarms, num_scouts, num_hive):
+    def __init__(self, config, num_swarms, num_scouts, num_hives):
         super().__init__()
 
         self.batch_size = config.batch_size
         self.using_cuda = config.use_cuda
         self.num_swarms = num_swarms
         self.num_scouts = num_scouts
-        self.num_hive = num_hive
-        self.num_entities = self.num_swarms + self.num_scouts + self.num_hive
+        self.num_hives = num_hives
+        self.num_entities = self.num_swarms + self.num_scouts + self.num_hives
         self.num_agents = self.num_swarms + self.num_scouts
         if self.using_cuda:
             self.Tensor = torch.cuda.FloatTensor
         else:
             self.Tensor = torch.CudaFloatTensorBase
-        
         locations = torch.rand(self.batch_size, self.num_entities,
                                2) * config.world_dim
-        hive_values = torch.rand(self.batch_size, self.num_entities, 1)
+
+        #! where to fit hive num in and where to fit hive locations in
+        hives = (torch.rand(self.batch_size, self.num_agents, 1)*config.num_hives).floor()
+        hive_value = torch.rand(self.batch_size, self.num_hives, 1)
 
         
-        #? the physical feature
+        #? the goal hive location label
         goal_entities = (torch.rand(self.batch_size, self.num_agents, 1)*
-                        self.num_hive).floor().long()
+                        self.num_hives).floor().long()
         goal_locations = self.Tensor(self.batch_size, self.num_agents, 2)
 
+        #? the agent label
         goal_agents = self.Tensor(self.batch_size, self.num_agents, 1)
         if using_cuda:
             locations = locations.cuda()
+            hives = hives.cuda()
+            goal_entities = goal_entities.cuda()
 
         self.locations = locations.require_grad_()
-        self.physical = hive_values.float()
+        self.hives = hives.float()
 
         #? set goals for swarms and scouts
         for b in range(self.batch_size):
             goal_agents[b] = torch.randperm(self.num_agents).view(self.num_agents, -1)
-        
+
         for b in range(self.batch_size):
             goal_locations[b] = self.locations[b][goal_entities[b].squeeze()]
-        
+
+        #? cat goal labels with its initial goal coordinates.
         self.goals = torch.cat((goal_locations, goal_agents), 2).requires_grad()
         goal_agents.requires_grad_()
         #? mem unchanged
@@ -98,7 +104,10 @@ class BeeGameModule(GameModule):
                 Variable(
                     torch.zeros(self.batch_size, self.num_agents,
                                 config.memory_size).cuda())
-
+                "vote":
+                Variable(
+                    torch.zeros(self.batch_size, self.num_agents,
+                                self.num_agents, config.memory_size).cuda())
             }
         else:
             self.memories = {
@@ -110,6 +119,10 @@ class BeeGameModule(GameModule):
                 Variable(
                     torch.zeros(self.batch_size, self.num_agents,
                                 config.memory_size))
+                "vote":
+                Variable(
+                    torch.zeros(self.batch_size, self.num_agents,
+                                self.num_agents, config.memory_size)
             }
         if self.using_cuda:
             self.utterances = Variable(
@@ -118,10 +131,15 @@ class BeeGameModule(GameModule):
                 self.memories["utterance"] = Variable(
                     torch.zeros(self.batch_size, self.num_agents,
                                 self.num_agents, config.memory_size).cuda())
-        
+        #? Compute current observations of relative coordinates got from agents
+        #? batch, agent, other_agent, 2
         agent_baselines = self.locations[:, :self.num_agent, :]
+        #? just copy, it looks redundunct to me
+        self.observations = self.locations.unsqueeze(1) - agent_baselines.unsqueeze(2)
 
-        
+        new_obs = self.goals[:,:,:2] - agent_baselines
+        self.observed_goals = torch.cat((new_obs, goal_agents), dim=2)
+
 
 
 """
@@ -135,5 +153,61 @@ goal updates, utterance might get updated,
     -Compute the consensus loss of bee as negative sum of log 2norm distance between acquired goals of each pair of bees
     -Compute the qulity loss as negative sum of log distance between best possible goal and each bees's goal.
 """
+        def forward(self, movements, utterances, votes):
+            #? remember only scouts can move
+            #? update location and compute cost
+            self.locations = self.locations + movements
+            agent_baselines = self.locations[:, :self.num_agents]
+            self.observations = self.locations.unsqueeze(
+            1) - agent_baselines.unsqueeze(2)
+            new_obs = self.goals[:, :, :2] - agent_baselines
+            goal_agents = self.goals[:, :, 2].unsqueeze(2)
+            self.observed_goals = torch.cat((new_obs, goal_agents), 2)
+
+            self.utterances = utterances
+            self.votes = votes
+            return self.compute_cost(movements, utterances, votes)
+
+        def compute_cost(self, movements, utterances, votes):
+
+            movement_cost = self.compute_movement_cost(movements)
+            vote_cost = self.compute_vote_cost(votes)
+
+            return physical_cost + goal_pred_cost + movement_cost
+
+        def compute_movement_cost(self, mvoements):
+            return torch.sum(torch.sqrt(torch.sum(torch.pow(movements, 2), -1)))
+
+        def compute_vote_cost(self, votes):
+            """ !votes: [batch, num_agents, 1]
+            #! d = 100, k = 30, t = 0.7
+            #! discount = d(1-sigmoid(k(max_freq(v^t) - t)))
+            #! value(self, ) the quality of a hive
+            #! r(s^t, a^t) = r(v^t+1) = sum(value(v_i^t+1))
+            """
+            #* move this into config
+            d, k, t = 100, 30, 0.7
+
+            discount = d * (1 - torch.sigmoid(k*max_freq(votes) - t))
+            return -torch.sum(torch.sum(value(), 1)/discount)
+
+        def value(self):
+            #? value = 1/square(distance to center of swarm times a constant)
+            swarm_center = torch.mean(self.locations[:, self.num_swarms, :], [1])
+            #! (batch, num_agents, 1)
+            return torch.sum(torch.pow(1/(self.goal_locations - swarm_center.unsqueeze(1)), 2), 2)
+
+        def max_freq(self, votes):
+            #! assume votes: [batch, num_agents, num_hives]
+            #? [batch, 1]
+            return torch.max(torch.sum(votes, 1), 1)/self.num_agents
+
+
+
+
+
+
+
+
 
 

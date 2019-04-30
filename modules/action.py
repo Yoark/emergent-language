@@ -39,7 +39,7 @@ class ActionModule(nn.Module):
         # utterance size (1, config.feat_vec_size)
         if self.using_utterances:
             x = torch.cat([physical.squeeze(1), utterance.squeeze(1), goal_processed], 1).squeeze(1)
-            
+
         else:
             x = torch.cat([physical.squeeze(0), goal_processed], 1).squeeze(1)
         processed, mem = self.processor(x, mem)

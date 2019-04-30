@@ -18,21 +18,35 @@ class BeeModule(AgentModule):
         super().__init__(self, config)
         # config need to be added, need to create scoutActmodule
         self.swarm_action_processor = SwarmActModule(config.swarm_action_processor)
-        self.hive_num = config.hive_num
-        self.scouts_action_processor = ScoutActModule(config.scout_action_processor)
-    
+        self.num_hives = config.num_hives
+        self.utterance_processor = ProcessingModule(config.utterance_processor)
+        self.scout_action_processor = ScoutActModule(config.scout_action_processor)
+        self.num_scout = config.num_scout
+        self.num_swarm = config.num_swarm
+        self.physical_processor = ProcessingModule(config.physical_processor)
+        self.physical_pooling = nn.AdaptiveAvgPool2d(1, config.feat_vec_size)
+        self.utterance_pooling = nn.AdaptiveAvgPool2d(1, config.feat_vec_size)
+        
+        self.vote_processor = ProcessingModule(config.vote_processor)
+        self.vote_pooling = nn.AdaptiveAvgPool2d(1, config.feat_vec_size)
+        
+        if self.penalizing_words:
+            self.word_counter = WordCountingModule(config.word_counter)
+
     def swarm_get_action(self, game, agent, utterance_feat, votes):
+        #* Good
         """
-        need figure out new mem part
         """
-        vote, new_mem = self.swarm_action_processor(utterance_feat, game.memories["action"][:, agent], 
+        #! WHat memory should it use?
+        vote, new_mem = self.swarm_action_processor(utterance_feat, game.memories["action"][:, agent],
         self.training)
         self.update_mem(game, "action", new_mem, agent)
         votes[:, agent, :] = vote
 
-    def scouts_get_action(self,game, agent, physical_feat, utterance_feat,
-                         movements, utterances, votes):
-        vote, movement, utterance, new_men = self.scout_action_processor(physical_feat, utterance_feat,
+    def scouts_get_action(self,game, agent, physical_feat, utterance_feat, vote_feat,
+                          movements, utterances, votes):
+        #* Good
+        vote, movement, utterance, new_mem = self.scout_action_processor(physical_feat, utterance_feat,
                                              game.memories["action"][:, agent],
                                              self.training)
         self.update_mem(game, "action", new_mem, agent)
@@ -40,38 +54,85 @@ class BeeModule(AgentModule):
         votes[:, agent, :] = vote
         utterances[:, agent, :] = utterances
 
+    def process_utterances(self, game, agent, other_agent, utterance_processes):
+        #* Good
+        utterance_processed, new_mem = self.utterance_processor(game.utterances[:, other_agent],
+                                            game.memories["utterance"][:, agent, other_agent])
+        self.update_mem(game, "utterance", num_mem, agent, other_agent)
+        utterance_processes[:, other_agent, :] = utterance_processed
+
+    def process_physical(self, game, agent, other_entity, physical_processes):
+        #* Good
+        physical_processed, new_mem = self.physical_processor(
+            game.observations[:, agent, other_entity],
+            game.memories["physical"][:, agent, other_entity])
+        self.update_mem(game, "physical", new_mem, agent, other_entity)
+        physical_processes[:, other_entity, :] = physical_processed
+
+    def process_vote(self, game, agent, other_agent, vote_processes):
+        vote_processed, num_mem = self.vote_processor(
+            game.votes[:, other_agent], game.memories["vote"][:, agent, other_agent])
+        self.update_mem(game, "votes", new_mem, agent, other_agent)
+        vote_processes[:, other_agent, :] = vote_processed
+
     def get_utterance_feat(self, game, agent):
-        utterance_processes = self.Tensor(game.batch_size, game.num_agents,
+        #* Good
+        """
+        gets observed utterances feature vector for a agent.
+        """
+        utterance_processes = self.Tensor(game.batch_size, game.num_scouts,
                               self.processing_hidden_size, require_grad=True)
-        for other_agent in range(game.num_agents):
+        for other_agent in range(game.num_scouts):
             self.process_utterances(game, agent, other_agent,
-                                    utterance_processes, goal_predictions)
-            return self.utterance_pooling(utterance_processes)
-    
-    
+                                    utterance_processes)
+        #! [1, feat_vec_size]
+        return self.utterance_pooling(utterance_processes)
+
+    def get_physical_feat(self, game, agent):
+        physical_processes = Variable(
+            self.Tensor(game.batch_size, game.num_entities,
+                        self.processing_hidden_size))
+        for entity in range(game.num_entities):
+            self.process_physical(game, agent, entity, physical_processes)
+        return self.physical_pooling(physical_processes)
+
+    def get_vote_feat(self, game, agent)
+
+        vote_processes = self.Tensor(game.batch_size, game.num_agents,
+                            self.processing_hidden_size)
+        for voter in range(game.num_agents):
+            self.process_vote(game, agent, voter, vote_processes)
+        return self.vote_pooling(vote_processes)
 
     def forward(self, game):
+        #* Good
         timesteps = []
         utters = []
         utters_nums_t = []
         for t in range(self.time_horizon):
+
             votes = self.Tensor(game.batch_size, game.num_agents,
-                                self.hive_num, require_grad=True)
+                                self.num_hives, require_grad=True)
             utterances = self.Tensor(game.batch_size, game.num_agents,
                                      self.vocab_size, require_grad=True)
-            movements = self.Tensor(game.batch_size, game.num_entities, 
+            movements = self.Tensor(game.batch_size, game.num_entities,
                                     self.movement_dim_size, required_grad=True).zero_()
 
-            for agent in range(game.num_agents):
+            for agent in range(game.num_swarm):
                 utterance_feat = self.get_utterance_feat(game, agent)
-                physical_feat = self.get_physical_feat(game, agent)
+                #? vote_feat = self.get_vote_feat(game, agent)
+                # ? physical_feat = self.get_physical_feat(game, agent)
                 # Divide the utterances, movement to two divisions or not?
                 self.swarm_get_action(game, agent, utterance_feat, votes)
-                self.scouts_get_action(game, agent, physical_feat, utterance_feat, 
+
+            for agent in range(game.num_swarm, game.num_swarm + game.num_scouts):
+                utterance_feat = self.get_utterance_feat(game, agent)
+                vote_feat = self.get_vote_feat(game, agent)
+                physical_feat = self.get_physical_feat(game, agent)
+                self.scouts_get_action(game, agent, physical_feat, utterance_feat, vote_feat,
                                        movements, utterances, votes)
 
-
-            cost = game(votes, movements, utterances)
+            cost = game(movements, utterances, votes)
             self.total_cost += cost
 
             if self.penalizing_words:
