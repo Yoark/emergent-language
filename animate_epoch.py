@@ -17,7 +17,7 @@ count = 0
 def _update(t):
     locations = t['locations']
     global circles, count
-    ax.set_title('epoch: 0, timestep {}'.format(count), fontsize=16)
+    ax.set_title('timestep: {}'.format(count), fontsize=16)
     count += 1
     if not circles:
         circles = [
