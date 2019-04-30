@@ -18,13 +18,15 @@ def _update(t, num_agents):
     goal_entities = t['goal_entities']
     locations = t['locations']
     physical = t['physical']
-    global circles, count
-    ax.set_title('timestep: {}'.format(count), fontsize=16)
 
     def get_color(idx):
         if isinstance(idx, torch.Tensor):
             idx = idx.item()
         return 'C{}'.format(idx)
+
+    global circles
+    global count
+    ax.set_title('timestep: {}'.format(count), fontsize=16)
 
     count += 1
     if not circles:
@@ -48,7 +50,8 @@ def _update(t, num_agents):
 
 
 def animate(timesteps, output_filename, num_agents):
-    global circles, count
+    global circles
+    global count
     circles = []
     count = 0
     # only consider a particular batch
