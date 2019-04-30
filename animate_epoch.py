@@ -4,16 +4,12 @@ from matplotlib import pyplot as plt
 
 from configs import DEFAULT_WORLD_DIM
 
-fig = plt.figure(figsize=(20, 20))
-plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
-fig.set_size_inches(20, 20)
-ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
 artists = []
 
 count = 0
 
 
-def _update(t, num_agents):
+def _update(t, num_agents, ax):
     sorted_goals = t['sorted_goals']
     goal_entities = t['goal_entities']
     locations = t['locations']
@@ -64,6 +60,11 @@ def animate(timesteps, output_filename, num_agents):
     # only consider a particular batch
     batch = 99
 
+    fig = plt.figure(figsize=(20, 20))
+    plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
+    fig.set_size_inches(20, 20)
+    ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
+
     def pick_batch(timestep, key):
         timestep[key] = timestep[key][batch]
 
@@ -74,6 +75,6 @@ def animate(timesteps, output_filename, num_agents):
             pick_batch(timestep, key)
 
     anim = animation.FuncAnimation(
-        fig, _update, fargs=(num_agents, ), frames=timesteps, repeat=False)
+        fig, _update, fargs=(num_agents, ax), frames=timesteps, repeat=False)
     writer = animation.writers['ffmpeg'](fps=2)
     anim.save(output_filename, writer=writer)
