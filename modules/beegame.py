@@ -67,7 +67,7 @@ class BeeGameModule(GameModule):
         #!hives = (torch.rand(self.batch_size, self.num_agents, 1)*config.num_hives).floor()
         #!hive_value = torch.rand(self.batch_size, self.num_hives, 1)
 
-        votes = torch.zeros(self.batch_size, self.num_agents,config.num_swarm)
+        votes = torch.zeros(self.batch_size, self.num_agents, self.num_swarm)
         if self.using_cuda:
             votes = votes.cuda()
         self.votes = Variable(votes)

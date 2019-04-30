@@ -26,6 +26,9 @@ MIN_AGENTS = 2
 MIN_LANDMARKS = 3
 NUM_COLORS = 3
 NUM_SHAPES = 2
+NUM_SWARM = 10
+NUM_SCOUT = 3
+NUM_HIVE = 2
 
 TrainingConfig = NamedTuple('TrainingConfig', [
     ('num_epochs', int),
@@ -38,6 +41,21 @@ TrainingConfig = NamedTuple('TrainingConfig', [
     ])
 
 GameConfig = NamedTuple('GameConfig', [
+    ('batch_size', int),
+    ('world_dim', Any),
+    ('max_agents', int),
+    ('max_landmarks', int),
+    ('min_agents', int),
+    ('min_landmarks', int),
+    ('num_shapes', int),
+    ('num_colors', int),
+    ('use_utterances', bool),
+    ('vocab_size', int),
+    ('memory_size', int),
+    ('use_cuda', bool),
+])
+
+BeeGameConfig = NamedTuple('BeeGameConfig', [
     ('batch_size', int),
     ('world_dim', Any),
     ('max_agents', int),
@@ -83,6 +101,51 @@ ActionModuleConfig = NamedTuple("ActionModuleConfig", [
     ('use_cuda', bool)
     ])
 
+ScoutActModuleConfig = NamedTuple("ScoutActModuleConfig", [
+    ('action_processor', ProcessingModuleConfig),
+    ('hidden_size', int),
+    ('dropout', float),
+    ('movement_dim_size', int),
+    ('movement_step_size', int),
+    ('vocab_size', int),
+    ('use_utterances', bool),
+    ('use_cuda', bool),
+    ('num_hives', int)
+    ])
+
+SwarmActModuleConfig = NamedTuple("SwarmActModuleConfig", [
+    ('action_processor', ProcessingModuleConfig),
+    ('hidden_size', int),
+    ('dropout', float),
+    ('movement_dim_size', int),
+    ('movement_step_size', int),
+    ('vocab_size', int),
+    ('use_utterances', bool),
+    ('use_cuda', bool),
+    ('num_hives', int)
+    ])
+
+BeeModuleConfig = NamedTuple("BeeModuleConfig", [
+    ('time_horizon', int),
+    ('feat_vec_size', int),
+    ('movement_dim_size', int),
+    ('num_hives', int),
+    ('num_scout', int),
+    ('num_swarm', int),
+    ('vocab_size', int),
+    ('utterance_processor', ProcessingModuleConfig),
+    ('physical_processor', ProcessingModuleConfig),
+    ('swarm_action_processor', SwarmActModuleConfig),
+    ('scout_action_processor', ScoutActModuleConfig),
+    ('vote_processor', ProcessingModuleConfig),
+    ('word_counter', WordCountingModuleConfig),
+    ('use_utterances', bool),
+    ('penalize_words', bool),
+    ('use_cuda', bool)
+])
+
+
+
 AgentModuleConfig = NamedTuple("AgentModuleConfig", [
     ('time_horizon', int),
     ('feat_vec_size', int),
@@ -113,6 +176,21 @@ default_word_counter_config = WordCountingModuleConfig(
         use_cuda=False)
 
 default_game_config = GameConfig(
+        DEFAULT_BATCH_SIZE,
+        DEFAULT_WORLD_DIM,
+        MAX_AGENTS,
+        MAX_LANDMARKS,
+        MIN_AGENTS,
+        MIN_LANDMARKS,
+        NUM_SHAPES,
+        NUM_COLORS,
+        USE_UTTERANCES,
+        DEFAULT_VOCAB_SIZE,
+        DEFAULT_HIDDEN_SIZE,
+        False
+        )
+
+default_beegame_config = BeeGameConfig(
         DEFAULT_BATCH_SIZE,
         DEFAULT_WORLD_DIM,
         MAX_AGENTS,
@@ -232,6 +310,67 @@ def get_agent_config(kwargs):
             utterance_processor=utterance_processor,
             physical_processor=default_agent_config.physical_processor,
             action_processor=action_processor,
+            word_counter=word_counter,
+            goal_size=default_agent_config.goal_size,
+            vocab_size=vocab_size,
+            use_utterances=use_utterances,
+            penalize_words=penalize_words,
+            use_cuda=use_cuda
+            )
+
+def get_bee_config(kwargs):
+    vocab_size = kwargs['vocab_size'] or DEFAULT_VOCAB_SIZE
+    use_utterances = (not kwargs['no_utterances'])
+    use_cuda = kwargs['use_cuda']
+    penalize_words = kwargs['penalize_words']
+    oov_prob = kwargs['oov_prob'] or DEFAULT_OOV_PROB
+    if use_utterances:
+        feat_vec_size = DEFAULT_FEAT_VEC_SIZE*3
+    else:
+        feat_vec_size = DEFAULT_FEAT_VEC_SIZE*2
+    utterance_processor = ProcessingModuleConfig(
+            processor=get_processor_config_with_input_size(vocab_size),
+            hidden_size=DEFAULT_HIDDEN_SIZE,
+            dropout=DEFAULT_DROPOUT)
+    swarm_action_processor = SwarmActModuleConfig(
+            action_processor=get_processor_config_with_input_size(feat_vec_size),
+            hidden_size=DEFAULT_HIDDEN_SIZE,
+            dropout=DEFAULT_DROPOUT,
+            movement_dim_size=constants.MOVEMENT_DIM_SIZE,
+            movement_step_size=constants.MOVEMENT_STEP_SIZE,
+            vocab_size=vocab_size,
+            use_utterances=use_utterances,
+            use_cuda=use_cuda,
+            num_hives=NUM_HIVE
+            )
+    scout_action_processor = ScoutActModuleConfig(
+            action_processor=get_processor_config_with_input_size(feat_vec_size),
+            hidden_size=DEFAULT_HIDDEN_SIZE,
+            dropout=DEFAULT_DROPOUT,
+            movement_dim_size=constants.MOVEMENT_DIM_SIZE,
+            movement_step_size=constants.MOVEMENT_STEP_SIZE,
+            vocab_size=vocab_size,
+            use_utterances=use_utterances,
+            use_cuda=use_cuda,
+            num_hives=NUM_HIVE
+            )
+    word_counter = WordCountingModuleConfig(
+            vocab_size=vocab_size,
+            oov_prob=oov_prob,
+            use_cuda=use_cuda)
+
+    return BeeModuleConfig(
+            time_horizon=kwargs['n_timesteps'] or default_agent_config.time_horizon,
+            feat_vec_size=default_agent_config.feat_vec_size,
+            movement_dim_size=default_agent_config.movement_dim_size,
+            num_hives=NUM_HIVE,
+            num_scout=NUM_SCOUT,
+            num_swarm=NUM_SWARM,
+            utterance_processor=utterance_processor,
+            physical_processor=default_agent_config.physical_processor,
+            swarm_action_processor=swarm_action_processor,
+            scout_action_processor=scout_action_processor,
+            vote_processor=get_processor_config_with_input_size(NUM_HIVE),
             word_counter=word_counter,
             goal_size=default_agent_config.goal_size,
             vocab_size=vocab_size,
