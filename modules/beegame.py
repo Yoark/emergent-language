@@ -5,7 +5,6 @@ from torch.autograd import Variable
 from modules.game import GameModule
 # We need physical obsearvation, utterance vector and goal vector
 # And the action will out utterance and movement action
-
 """
     BeegameModule
     Description:
@@ -44,6 +43,7 @@ from modules.game import GameModule
         config needs: -batch_size, -using_utterances, -world_dim, -vocab_size, -memory_size, -num_colors -num_shapes
 """
 
+
 class BeeGameModule(nn.Module):
     def __init__(self, config, num_swarm, num_scouts, num_hives):
         super().__init__()
@@ -64,7 +64,6 @@ class BeeGameModule(nn.Module):
         #!hives = (torch.rand(self.batch_size, self.num_agents, 1)*config.num_hives).floor()
         #!hive_value = torch.rand(self.batch_size, self.num_hives, 1)
 
-
         hive_values = torch.rand(self.batch_size, self.num_hives, 1)
         locations = torch.rand(self.batch_size, self.num_entities,
                                2) * config.world_dim
@@ -74,13 +73,15 @@ class BeeGameModule(nn.Module):
                   config.num_shapes).floor()
 
         votes = torch.zeros(self.batch_size, self.num_agents, self.num_hives)
-        
+
         if self.using_cuda:
             locations = locations.cuda()
             colors = colors.cuda()
             shapes = shapes.cuda()
             votes = votes.cuda()
+            hive_values = hive_values.cuda()
 
+        self.hive_values = Variable(hive_values)
         self.votes = Variable(votes)
         # [batch_size, num_entities, 2]
         self.locations = Variable(locations)
@@ -94,7 +95,7 @@ class BeeGameModule(nn.Module):
         action_memories = torch.zeros(self.batch_size, self.num_agents,
                                       config.memory_size)
         vote_memories = torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size)
+                                    config.memory_size)
         if self.using_cuda:
             physical_memories = physical_memories.cuda()
             action_memories = action_memories.cuda()
@@ -106,25 +107,22 @@ class BeeGameModule(nn.Module):
             "action": Variable(action_memories)
         }
 
-    
         utterances = torch.zeros(self.batch_size, self.num_agents,
-                                config.vocab_size)
+                                 config.vocab_size)
         utterances_memories = torch.zeros(self.batch_size, self.num_agents,
-                        self.num_agents, config.memory_size)
+                                          self.num_agents, config.memory_size)
         if self.using_cuda:
             utterances = utterances.cuda()
             utterances_memories = utterances_memories.cuda()
         self.utterances = Variable(utterances)
         self.memories["utterance"] = Variable(utterances_memories)
 
-
-
         #? Compute current observations of relative coordinates got from agents
         #? batch, agent, other_agent, 2
         agent_baselines = self.locations[:, :self.num_agents, :]
         #? just copy, it looks redundunct to me
-        self.observations = self.locations.unsqueeze(1) - agent_baselines.unsqueeze(2)
-
+        self.observations = self.locations.unsqueeze(
+            1) - agent_baselines.unsqueeze(2)
 
     def forward(self, movements, utterances, votes):
         #? remember only scouts can move
@@ -132,7 +130,7 @@ class BeeGameModule(nn.Module):
         self.locations = self.locations + movements
         agent_baselines = self.locations[:, :self.num_agents]
         self.observations = self.locations.unsqueeze(
-        1) - agent_baselines.unsqueeze(2)
+            1) - agent_baselines.unsqueeze(2)
 
         self.utterances = utterances
         self.votes = votes
@@ -156,31 +154,23 @@ class BeeGameModule(nn.Module):
         #* move this into config
         d, k, t = 100, 30, 0.7
 
-        discount = d * (1 - torch.sigmoid(k * self.max_freq(votes) - t))
-        return -torch.sum(self.value(votes), 1) / discount
+        max_freq = self.max_freq(votes)
+        value = self.value(votes)
+        discount = d * (1 - torch.sigmoid(k * (max_freq - t)))
+        return -(value / discount).sum()
 
     def value(self, votes):
         _, agent_vote = votes.max(2)
-        values = self.hive_values[agent_vote]
-        import ipdb
-        ipdb.set_trace()
-
-        return torch.sum(values)
+        values = self.Tensor(self.batch_size)
+        for idx, hive_values in enumerate(self.hive_values):
+            per_batch_value = hive_values[agent_vote[idx]].sum()
+            values[idx] = per_batch_value
+        return values
 
     def max_freq(self, votes):
         #! assume votes: [batch, num_agents, num_hives]
         #? [batch, 1]
-
-        import ipdb
-        ipdb.set_trace()
-        return torch.max(torch.sum(votes, 1), 1) / self.num_agents
-
-
-
-
-
-
-
-
-
-
+        _, agent_vote = votes.max(2)
+        per_batch_vote_count = torch.stack([(agent_vote == vote).sum(1)
+                                          for vote in agent_vote.unique()]).transpose(0, 1)
+        return torch.max(per_batch_vote_count.float() / self.num_agents, 1)[0]
