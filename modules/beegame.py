@@ -44,7 +44,7 @@ from modules.game import GameModule
         config needs: -batch_size, -using_utterances, -world_dim, -vocab_size, -memory_size, -num_colors -num_shapes
 """
 
-class BeeGameModule(GameModule):
+class BeeGameModule(nn.Module):
 
     def __init__(self, config, num_swarm, num_scouts, num_hives):
         super().__init__()
@@ -59,110 +59,74 @@ class BeeGameModule(GameModule):
         if self.using_cuda:
             self.Tensor = torch.cuda.FloatTensor
         else:
-            self.Tensor = torch.CudaFloatTensorBase
-        locations = torch.rand(self.batch_size, self.num_entities,
-                               2) * config.world_dim
+            self.Tensor = torch.FloatTensor
 
         #! where to fit hive num in and where to fit hive locations in
         #!hives = (torch.rand(self.batch_size, self.num_agents, 1)*config.num_hives).floor()
         #!hive_value = torch.rand(self.batch_size, self.num_hives, 1)
 
-        votes = torch.zeros(self.batch_size, self.num_agents, self.num_swarm)
-        if self.using_cuda:
-            votes = votes.cuda()
-        self.votes = Variable(votes)
 
-        #? the goal hive location label
-        """ goal_entities = (torch.rand(self.batch_size, self.num_agents, 1)*
-                        self.num_hives).floor().long() """
-        """ goal_locations = self.Tensor(self.batch_size, self.num_agents, 2)
-        #? the agent label
-        goal_agents = self.Tensor(self.batch_size, self.num_agents, 1) """
+        hive_values = torch.rand(self.batch_size, self.num_hives, 1)
+        locations = torch.rand(self.batch_size, self.num_entities,
+                               2) * config.world_dim
+        colors = (torch.rand(self.batch_size, self.num_entities, 1) *
+                  config.num_colors).floor()
+        shapes = (torch.rand(self.batch_size, self.num_entities, 1) *
+                  config.num_shapes).floor()
 
+        votes = torch.zeros(self.batch_size, self.num_agents, self.num_hives)
+        
         if self.using_cuda:
             locations = locations.cuda()
-            # hives = hives.cuda()
-            # goal_entities = goal_entities.cuda()
+            colors = colors.cuda()
+            shapes = shapes.cuda()
+            votes = votes.cuda()
 
+        self.votes = Variable(votes)
+        # [batch_size, num_entities, 2]
         self.locations = Variable(locations)
-        # self.hives = hives.float()
+        # [batch_size, num_entities, 2]
+        self.physical = Variable(torch.cat((colors, shapes), 2).float())
+        # [batch_size, num_agents, 3]
 
-        
-"""         for b in range(self.batch_size):
-            goal_agents[b] = torch.randperm(self.num_agents).view(self.num_agents, -1)
+        physical_memories = torch.zeros(self.batch_size, self.num_agents,
+                                        self.num_entities, config.memory_size)
 
-        for b in range(self.batch_size):
-            goal_locations[b] = self.locations[b][goal_entities[b].squeeze()] """
-
-        #? cat goal labels with its initial goal coordinates.
-"""         self.goals = torch.cat((goal_locations, goal_agents), 2).requires_grad()
-        goal_agents.requires_grad_() """
-        #? mem unchanged
+        action_memories = torch.zeros(self.batch_size, self.num_agents,
+                                      config.memory_size)
+        vote_memories = torch.zeros(self.batch_size, self.num_agents,
+                                config.memory_size)
         if self.using_cuda:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size).cuda()),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size).cuda())
-                "vote":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size).cuda())
-            }
-        else:
-            self.memories = {
-                "physical":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_entities, config.memory_size)),
-                "action":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                config.memory_size))
-                "vote":
-                Variable(
-                    torch.zeros(self.batch_size, self.num_agents,
-                                self.num_agents, config.memory_size)
-            }
-        if self.using_utterances:
-            utterances = torch.zeros(self.batch_size, self.num_agents,
-                                    config.vocab_size)
-            utterances_memories = torch.zeros(self.batch_size, self.num_agents,
-                            self.num_agents, config.memory_size)
-            if self.using_cuda:
-                utterances = utterances.cuda()
-                utterances_memories = utterances_memories.cuda()
-            self.utterances = Variable(utterances)
-            self.memories["utterance"] = Variable(utterances_memories)
+            physical_memories = physical_memories.cuda()
+            action_memories = action_memories.cuda()
+            vote_memories = vote_memories.cuda()
+
+        self.memories = {
+            "vote": Variable(vote_memories),
+            "physical": Variable(physical_memories),
+            "action": Variable(action_memories)
+        }
+
+    
+        utterances = torch.zeros(self.batch_size, self.num_agents,
+                                config.vocab_size)
+        utterances_memories = torch.zeros(self.batch_size, self.num_agents,
+                        self.num_agents, config.memory_size)
+        if self.using_cuda:
+            utterances = utterances.cuda()
+            utterances_memories = utterances_memories.cuda()
+        self.utterances = Variable(utterances)
+        self.memories["utterance"] = Variable(utterances_memories)
 
 
 
         #? Compute current observations of relative coordinates got from agents
         #? batch, agent, other_agent, 2
-        agent_baselines = self.locations[:, :self.num_agent, :]
+        agent_baselines = self.locations[:, :self.num_agents, :]
         #? just copy, it looks redundunct to me
         self.observations = self.locations.unsqueeze(1) - agent_baselines.unsqueeze(2)
 
-        #new_obs = self.goals[:,:,:2] - agent_baselines
-        #self.observed_goals = torch.cat((new_obs, goal_agents), dim=2)
 
-
-
-"""
-- The scouts should be able to advertise to its surrounding bees within a radius
-- Bees can observe its surroundings within a radius
-!utterance remains unchanged within one epsiode of game.
-Each timestamp, scouts location updates, goal updates, accumulators location updates,
-goal updates, utterance might get updated,
-! and a accrued cost for all games in the batch is computed
-! More cost computation methods:
-    -Compute the consensus loss of bee as negative sum of log 2norm distance between acquired goals of each pair of bees
-    -Compute the qulity loss as negative sum of log distance between best possible goal and each bees's goal.
-"""
         def forward(self, movements, utterances, votes):
             #? remember only scouts can move
             #? update location and compute cost
@@ -170,22 +134,17 @@ goal updates, utterance might get updated,
             agent_baselines = self.locations[:, :self.num_agents]
             self.observations = self.locations.unsqueeze(
             1) - agent_baselines.unsqueeze(2)
-            #new_obs = self.goals[:, :, :2] - agent_baselines
-            #goal_agents = self.goals[:, :, 2].unsqueeze(2)
-            # self.observed_goals = torch.cat((new_obs, goal_agents), 2)
 
             self.utterances = utterances
             self.votes = votes
             return self.compute_cost(movements, utterances, votes)
 
         def compute_cost(self, movements, utterances, votes):
-
             movement_cost = self.compute_movement_cost(movements)
             vote_cost = self.compute_vote_cost(votes)
+            return vote_cost + movement_cost
 
-            return physical_cost + goal_pred_cost + movement_cost
-
-        def compute_movement_cost(self, mvoements):
+        def compute_movement_cost(self, movements):
             return torch.sum(torch.sqrt(torch.sum(torch.pow(movements, 2), -1)))
 
         def compute_vote_cost(self, votes):
@@ -198,19 +157,24 @@ goal updates, utterance might get updated,
             #* move this into config
             d, k, t = 100, 30, 0.7
 
-            discount = d * (1 - torch.sigmoid(k*max_freq(votes) - t))
-            return -torch.sum(torch.sum(value(), 1)/discount)
+            discount = d * (1 - torch.sigmoid(k * self.max_freq(votes) - t))
+            return -torch.sum(self.value(votes), 1) / discount
 
-        def value(self):
-            #? value = 1/square(distance to center of swarm times a constant)
-            swarm_center = torch.mean(self.locations[:, self.num_swarm, :], [1])
-            #! (batch, num_agents, 1)
-            return torch.sum(torch.pow(1/(self.goal_locations - swarm_center.unsqueeze(1)), 2), 2)
+        def value(self, votes):
+            _, agent_vote = votes.max(2)
+            values = self.hive_values[agent_vote]
+            import ipdb
+            ipdb.set_trace()
+
+            return torch.sum(values)
 
         def max_freq(self, votes):
             #! assume votes: [batch, num_agents, num_hives]
             #? [batch, 1]
-            return torch.max(torch.sum(votes, 1), 1)/self.num_agents
+
+            import ipdb
+            ipdb.set_trace()
+            return torch.max(torch.sum(votes, 1), 1) / self.num_agents
 
 
 

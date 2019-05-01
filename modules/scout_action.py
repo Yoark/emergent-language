@@ -1,14 +1,17 @@
-from modules.action import ActionModule
-"control swarm action: utters -> votes"
+import torch
+from torch import nn
+from modules.gumbel_softmax import GumbelSoftmax
+from modules.processing import ProcessingModule
+"""control swarm action: utters -> votes"""
 
-class ScoutActModule(ActionModule):
+class ScoutActModule(nn.Module):
     def __init__(self, config):
-        super().__init__(self, config)
+        super().__init__()
         # define vote_generator structure
         self.vote_generator = nn.Sequential(
              nn.Linear(config.action_processor.hidden_size, config.hidden_size),
                     nn.ELU(),
-                    nn.Linear(config.hidden_size, config.num_hive)
+                    nn.Linear(config.hidden_size, config.num_hives)
         )
         self.gumbel_softmax_vote = GumbelSoftmax(config.use_cuda)
         
@@ -23,6 +26,7 @@ class ScoutActModule(ActionModule):
                     nn.ELU(),
                     nn.Linear(config.hidden_size, config.vocab_size))
         self.gumbel_softmax_utter = GumbelSoftmax(config.use_cuda)
+        self.processor = ProcessingModule(config.action_processor)
 
     def forward(self, physical, utterance, mem, training):
         x = torch.cat((physical.squeeze(1), utterance.squeeze(1)), 1)

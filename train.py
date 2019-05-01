@@ -10,6 +10,8 @@ import configs
 from animate_epoch import animate
 from modules.agent import AgentModule
 from modules.game import GameModule
+from modules.beegame import BeeGameModule
+from modules.bee import BeeModule
 
 parser = argparse.ArgumentParser(
     description="Trains the agents for cooperative communication task")
@@ -19,6 +21,10 @@ parser.add_argument(
     help='if specified disables the communications channel (default enabled)')
 parser.add_argument(
     '--penalize-words',
+    action='store_true',
+    help='if specified penalizes uncommon word usage (default disabled)')
+parser.add_argument(
+    '--bee-game',
     action='store_true',
     help='if specified penalizes uncommon word usage (default disabled)')
 parser.add_argument(
@@ -123,71 +129,114 @@ def print_losses(epoch, losses, dists, game_config):
 
 def main():
     args = vars(parser.parse_args())
-    agent_config = configs.get_agent_config(args)
-    game_config = configs.get_game_config(args)
     training_config = configs.get_training_config(args)
     print("Training with config:")
     print(training_config)
-    print(game_config)
-    print(agent_config)
-    agent = AgentModule(agent_config)
-    if training_config.use_cuda:
-        agent = agent.cuda()
-    optimizer = RMSprop(agent.parameters(), lr=training_config.learning_rate)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
     losses = defaultdict(lambda: defaultdict(list))
     dists = defaultdict(lambda: defaultdict(list))
 
-    num_utters = []
-    utter_times = []
-
-    for epoch in range(training_config.num_epochs):
-        num_agents = np.random.randint(game_config.min_agents,
-                                       game_config.max_agents + 1)
-        num_landmarks = np.random.randint(game_config.min_landmarks,
-                                          game_config.max_landmarks + 1)
-        agent.reset()
-        game = GameModule(game_config, num_agents, num_landmarks)
+    if not args['bee_game']:
+        game_config = configs.get_game_config(args)
+        agent_config = configs.get_agent_config(args)
+        print(game_config)
+        print(agent_config)
+        agent = AgentModule(agent_config)
         if training_config.use_cuda:
-            game = game.cuda()
-        optimizer.zero_grad()
+            agent = agent.cuda()
+        optimizer = RMSprop(agent.parameters(), lr=training_config.learning_rate)
+        scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
 
-        total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
-        output_filename = 'epoch_{}_animation.mp4'.format(epoch)
-        animate(timesteps, output_filename, num_agents)
+        num_utters = []
+        utter_times = []
+        for epoch in range(training_config.num_epochs):
+            num_agents = np.random.randint(game_config.min_agents,
+                                        game_config.max_agents + 1)
+            num_landmarks = np.random.randint(game_config.min_landmarks,
+                                            game_config.max_landmarks + 1)
+            agent.reset()
+            game = GameModule(game_config, num_agents, num_landmarks)
 
-        num_utters.append(num_utter)
-        utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
+            if training_config.use_cuda:
+                game = game.cuda()
+            optimizer.zero_grad()
 
-        if epoch % 10 == 0:
-            print(prob)
+            
+            total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
+            
+                
+            output_filename = 'epoch_{}_animation.mp4'.format(epoch)
 
-        per_agent_loss = total_loss.item(
-        ) / num_agents / game_config.batch_size
-        losses[num_agents][num_landmarks].append(per_agent_loss)
+            num_utters.append(num_utter)
+            utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
 
-        dist = game.get_avg_agent_to_goal_distance()
-        avg_dist = dist.item() / num_agents / game_config.batch_size
-        dists[num_agents][num_landmarks].append(avg_dist)
+            if epoch % 10 == 0:
+                print(prob)
+                animate(timesteps, output_filename, num_agents)
 
-        print_losses(epoch, losses, dists, game_config)
+            per_agent_loss = total_loss.item(
+            ) / num_agents / game_config.batch_size
+            losses[num_agents][num_landmarks].append(per_agent_loss)
 
-        total_loss.backward()
-        optimizer.step()
+            dist = game.get_avg_agent_to_goal_distance()
+            avg_dist = dist.item() / num_agents / game_config.batch_size
+            dists[num_agents][num_landmarks].append(avg_dist)
 
-        if num_agents == game_config.max_agents and num_landmarks == game_config.max_landmarks:
-            scheduler.step(
-                losses[game_config.max_agents][game_config.max_landmarks][-1])
+            print_losses(epoch, losses, dists, game_config)
+
+            total_loss.backward()
+            optimizer.step()
+
+            if num_agents == game_config.max_agents and num_landmarks == game_config.max_landmarks:
+                scheduler.step(
+                    losses[game_config.max_agents][game_config.max_landmarks][-1])
+    else:
+        game_config = configs.get_game_config(args)
+        agent_config = configs.get_bee_config(args)
+        print(game_config)
+        print(agent_config)
+        agent = BeeModule(agent_config)
+        if training_config.use_cuda:
+            agent = agent.cuda()
+
+        optimizer = RMSprop(agent.parameters(), lr=training_config.learning_rate)
+        scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
+
+        num_utters = []
+        utter_times = []
+        num_swarm = 10
+        num_scouts = 3
+        num_hives = 2
+        for epoch in range(training_config.num_epochs):
+            agent.reset()
+            game = BeeGameModule(game_config, num_swarm, num_scouts, num_hives)
+            
+            if training_config.use_cuda:
+                game = game.cuda()
+            optimizer.zero_grad()
+
+            total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
+
+            # output_filename = 'bee_game_epoch_{}_animation.mp4'.format(epoch)
+
+            num_utters.append(num_utter)
+            utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
+
+            if epoch % 10 == 0:
+                print(prob)
+                # animate(timesteps, output_filename, num_agents)
+
+            print_losses(epoch, losses, [], game_config)
+
+            total_loss.backward()
+            optimizer.step()
+
+            scheduler.step(losses[num_swarm + num_scouts][num_hives][-1])
 
     if training_config.save_model:
         #print(agent.LOG)
         torch.save(agent, training_config.save_model_file)
         print("Saved agent model weights at %s" %
               training_config.save_model_file)
-    """
-    import code
-    code.interact(local=locals())
-    """
 
     return num_utters, utter_times
 

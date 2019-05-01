@@ -329,11 +329,11 @@ def get_bee_config(kwargs):
     else:
         feat_vec_size = DEFAULT_FEAT_VEC_SIZE*2
     utterance_processor = ProcessingModuleConfig(
-            processor=get_processor_config_with_input_size(vocab_size),
+            input_size=DEFAULT_VOCAB_SIZE,
             hidden_size=DEFAULT_HIDDEN_SIZE,
             dropout=DEFAULT_DROPOUT)
     swarm_action_processor = SwarmActModuleConfig(
-            action_processor=get_processor_config_with_input_size(feat_vec_size),
+            action_processor=get_processor_config_with_input_size(DEFAULT_FEAT_VEC_SIZE),
             hidden_size=DEFAULT_HIDDEN_SIZE,
             dropout=DEFAULT_DROPOUT,
             movement_dim_size=constants.MOVEMENT_DIM_SIZE,
@@ -372,10 +372,11 @@ def get_bee_config(kwargs):
             scout_action_processor=scout_action_processor,
             vote_processor=get_processor_config_with_input_size(NUM_HIVE),
             word_counter=word_counter,
-            goal_size=default_agent_config.goal_size,
+            
             vocab_size=vocab_size,
             use_utterances=use_utterances,
             penalize_words=penalize_words,
-            use_cuda=use_cuda
+            use_cuda=use_cuda,
+            
             )
 
