@@ -26,8 +26,8 @@ MIN_AGENTS = 2
 MIN_LANDMARKS = 3
 NUM_COLORS = 3
 NUM_SHAPES = 2
-NUM_SWARM = 10
-NUM_SCOUT = 3
+NUM_SWARM = 3
+NUM_SCOUT = 2
 NUM_HIVE = 2
 
 TrainingConfig = NamedTuple('TrainingConfig', [

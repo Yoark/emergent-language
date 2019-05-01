@@ -168,10 +168,11 @@ def main():
     training_config = configs.get_training_config(args)
     print("Training with config:")
     print(training_config)
-    losses = defaultdict(lambda: defaultdict(list))
-    dists = defaultdict(lambda: defaultdict(list))
+    
 
     if not args['bee_game']:
+        losses = defaultdict(lambda: defaultdict(list))
+        dists = defaultdict(lambda: defaultdict(list))      
         game_config = configs.get_game_config(args)
         agent_config = configs.get_agent_config(args)
         print(game_config)
@@ -242,8 +243,8 @@ def main():
 
         num_utters = []
         utter_times = []
-        num_swarm = 10
-        num_scouts = 3
+        num_swarm = 3
+        num_scouts = 2
         num_hives = 2
         num_agents = num_swarm + num_scouts
 
@@ -267,8 +268,9 @@ def main():
                 # animate(timesteps, output_filename, num_agents)
             per_agent_loss = total_loss.item(
             ) / num_agents / game_config.batch_size
-            print(per_agent_loss)
-            losses[num_swarm][num_scouts][num_hives].append(per_agent_loss)           
+            
+            losses[num_swarm][num_scouts][num_hives].append(per_agent_loss)  
+            
             print_bee_losses(epoch, losses, game_config)
 
             total_loss.backward()
