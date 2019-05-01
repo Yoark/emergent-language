@@ -170,8 +170,9 @@ class BeeGameModule(nn.Module):
     def value(self, votes):
         _, agent_vote = votes.max(2)
         values = self.Tensor(self.batch_size)
-        # self.dist = self.locations[:, :self.num_agents+1, :].unsqueeze(1) - self.locations[:, self.num_agents:, :].unsqueeze(2)
         hive_values = self.hive_values * self.hive_mask
+        #print('hive_mask: {}'.format(self.hive_mask[0]))
+        #print('hive_values: {}'.format(hive_values[0]))
         for idx, hive_values in enumerate(hive_values):
             per_batch_value = hive_values[agent_vote[idx]].sum()
             values[idx] = per_batch_value
