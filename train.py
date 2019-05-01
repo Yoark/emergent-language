@@ -260,7 +260,8 @@ def main():
             total_loss, timesteps, num_utter, utter_num_t, prob, votes_epoch, votes_ratios = agent(game)
 
             # output_filename = 'bee_game_epoch_{}_animation.mp4'.format(epoch)
-            ratio = game.max_freq(votes_epoch)
+            ratio = game.max_freq(votes_epoch).mean()
+            
             votes_ratio_per_epoch.append(ratio)
             votes_ratio_per_ts.append(votes_ratios)
 
