@@ -139,6 +139,7 @@ class BeeGameModule(nn.Module):
     def compute_cost(self, movements, votes):
         movement_cost = self.compute_movement_cost(movements)
         vote_cost, max_freq = self.compute_vote_cost(votes)
+        max_freq = max_freq.mean()
         return vote_cost + movement_cost, max_freq
 
     def compute_movement_cost(self, movements):
