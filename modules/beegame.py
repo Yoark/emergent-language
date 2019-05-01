@@ -60,10 +60,9 @@ class BeeGameModule(nn.Module):
         else:
             self.Tensor = torch.FloatTensor
 
-        #! where to fit hive num in and where to fit hive locations in
-        #!hives = (torch.rand(self.batch_size, self.num_agents, 1)*config.num_hives).floor()
-        #!hive_value = torch.rand(self.batch_size, self.num_hives, 1)
+        self.find_hive_epsilon = 0.5
 
+        hive_mask = torch.zeros(self.batch_size, self.num_hives, 1)
         hive_values = torch.rand(self.batch_size, self.num_hives, 1)
         locations = torch.rand(self.batch_size, self.num_entities,
                                2) * config.world_dim
@@ -80,7 +79,9 @@ class BeeGameModule(nn.Module):
             shapes = shapes.cuda()
             votes = votes.cuda()
             hive_values = hive_values.cuda()
+            hive_mask = hive_mask.cuda()
 
+        self.hive_mask = Variable(hive_mask)
         self.hive_values = Variable(hive_values)
         self.votes = Variable(votes)
         # [batch_size, num_entities, 2]
@@ -128,7 +129,13 @@ class BeeGameModule(nn.Module):
         #? remember only scouts can move
         #? update location and compute cost
         self.locations = self.locations + movements
+        hive_locations = self.locations[:, self.num_agents:]
         agent_baselines = self.locations[:, :self.num_agents]
+        for batch, hive_locs in enumerate(hive_locations):
+            agent_locs = agent_baselines[batch]
+            for hive_idx, hive_loc in enumerate(hive_locs):
+                if any(torch.sum(torch.pow((agent_locs - hive_loc), 2), -1) < self.find_hive_epsilon):
+                    self.hive_mask[batch][hive_idx] = 1
         self.observations = self.locations.unsqueeze(
             1) - agent_baselines.unsqueeze(2)
 
@@ -163,7 +170,9 @@ class BeeGameModule(nn.Module):
     def value(self, votes):
         _, agent_vote = votes.max(2)
         values = self.Tensor(self.batch_size)
-        for idx, hive_values in enumerate(self.hive_values):
+        # self.dist = self.locations[:, :self.num_agents+1, :].unsqueeze(1) - self.locations[:, self.num_agents:, :].unsqueeze(2)
+        hive_values = self.hive_values * self.hive_mask
+        for idx, hive_values in enumerate(hive_values):
             per_batch_value = hive_values[agent_vote[idx]].sum()
             values[idx] = per_batch_value
         return values
