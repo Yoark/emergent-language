@@ -45,7 +45,6 @@ from modules.game import GameModule
 """
 
 class BeeGameModule(nn.Module):
-
     def __init__(self, config, num_swarm, num_scouts, num_hives):
         super().__init__()
 
@@ -127,54 +126,54 @@ class BeeGameModule(nn.Module):
         self.observations = self.locations.unsqueeze(1) - agent_baselines.unsqueeze(2)
 
 
-        def forward(self, movements, utterances, votes):
-            #? remember only scouts can move
-            #? update location and compute cost
-            self.locations = self.locations + movements
-            agent_baselines = self.locations[:, :self.num_agents]
-            self.observations = self.locations.unsqueeze(
-            1) - agent_baselines.unsqueeze(2)
+    def forward(self, movements, utterances, votes):
+        #? remember only scouts can move
+        #? update location and compute cost
+        self.locations = self.locations + movements
+        agent_baselines = self.locations[:, :self.num_agents]
+        self.observations = self.locations.unsqueeze(
+        1) - agent_baselines.unsqueeze(2)
 
-            self.utterances = utterances
-            self.votes = votes
-            return self.compute_cost(movements, utterances, votes)
+        self.utterances = utterances
+        self.votes = votes
+        return self.compute_cost(movements, utterances, votes)
 
-        def compute_cost(self, movements, utterances, votes):
-            movement_cost = self.compute_movement_cost(movements)
-            vote_cost = self.compute_vote_cost(votes)
-            return vote_cost + movement_cost
+    def compute_cost(self, movements, utterances, votes):
+        movement_cost = self.compute_movement_cost(movements)
+        vote_cost = self.compute_vote_cost(votes)
+        return vote_cost + movement_cost
 
-        def compute_movement_cost(self, movements):
-            return torch.sum(torch.sqrt(torch.sum(torch.pow(movements, 2), -1)))
+    def compute_movement_cost(self, movements):
+        return torch.sum(torch.sqrt(torch.sum(torch.pow(movements, 2), -1)))
 
-        def compute_vote_cost(self, votes):
-            """ !votes: [batch, num_agents, 1]
-            #! d = 100, k = 30, t = 0.7
-            #! discount = d(1-sigmoid(k(max_freq(v^t) - t)))
-            #! value(self, ) the quality of a hive
-            #! r(s^t, a^t) = r(v^t+1) = sum(value(v_i^t+1))
-            """
-            #* move this into config
-            d, k, t = 100, 30, 0.7
+    def compute_vote_cost(self, votes):
+        """ !votes: [batch, num_agents, 1]
+        #! d = 100, k = 30, t = 0.7
+        #! discount = d(1-sigmoid(k(max_freq(v^t) - t)))
+        #! value(self, ) the quality of a hive
+        #! r(s^t, a^t) = r(v^t+1) = sum(value(v_i^t+1))
+        """
+        #* move this into config
+        d, k, t = 100, 30, 0.7
 
-            discount = d * (1 - torch.sigmoid(k * self.max_freq(votes) - t))
-            return -torch.sum(self.value(votes), 1) / discount
+        discount = d * (1 - torch.sigmoid(k * self.max_freq(votes) - t))
+        return -torch.sum(self.value(votes), 1) / discount
 
-        def value(self, votes):
-            _, agent_vote = votes.max(2)
-            values = self.hive_values[agent_vote]
-            import ipdb
-            ipdb.set_trace()
+    def value(self, votes):
+        _, agent_vote = votes.max(2)
+        values = self.hive_values[agent_vote]
+        import ipdb
+        ipdb.set_trace()
 
-            return torch.sum(values)
+        return torch.sum(values)
 
-        def max_freq(self, votes):
-            #! assume votes: [batch, num_agents, num_hives]
-            #? [batch, 1]
+    def max_freq(self, votes):
+        #! assume votes: [batch, num_agents, num_hives]
+        #? [batch, 1]
 
-            import ipdb
-            ipdb.set_trace()
-            return torch.max(torch.sum(votes, 1), 1) / self.num_agents
+        import ipdb
+        ipdb.set_trace()
+        return torch.max(torch.sum(votes, 1), 1) / self.num_agents
 
 
 

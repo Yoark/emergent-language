@@ -209,9 +209,9 @@ def main():
         for epoch in range(training_config.num_epochs):
             agent.reset()
             game = BeeGameModule(game_config, num_swarm, num_scouts, num_hives)
-            
             if training_config.use_cuda:
                 game = game.cuda()
+                
             optimizer.zero_grad()
 
             total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)

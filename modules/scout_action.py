@@ -8,6 +8,7 @@ class ScoutActModule(nn.Module):
     def __init__(self, config):
         super().__init__()
         # define vote_generator structure
+        self.movement_step_size = config.movement_step_size
         self.vote_generator = nn.Sequential(
              nn.Linear(config.action_processor.hidden_size, config.hidden_size),
                     nn.ELU(),

@@ -324,10 +324,10 @@ def get_bee_config(kwargs):
     use_cuda = kwargs['use_cuda']
     penalize_words = kwargs['penalize_words']
     oov_prob = kwargs['oov_prob'] or DEFAULT_OOV_PROB
-    if use_utterances:
-        feat_vec_size = DEFAULT_FEAT_VEC_SIZE*3
-    else:
-        feat_vec_size = DEFAULT_FEAT_VEC_SIZE*2
+    # if use_utterances:
+    #     feat_vec_size = DEFAULT_FEAT_VEC_SIZE*3
+    # else:
+    #     feat_vec_size = DEFAULT_FEAT_VEC_SIZE*2
     utterance_processor = ProcessingModuleConfig(
             input_size=DEFAULT_VOCAB_SIZE,
             hidden_size=DEFAULT_HIDDEN_SIZE,
@@ -344,7 +344,7 @@ def get_bee_config(kwargs):
             num_hives=NUM_HIVE
             )
     scout_action_processor = ScoutActModuleConfig(
-            action_processor=get_processor_config_with_input_size(feat_vec_size),
+            action_processor=get_processor_config_with_input_size(2*DEFAULT_FEAT_VEC_SIZE),
             hidden_size=DEFAULT_HIDDEN_SIZE,
             dropout=DEFAULT_DROPOUT,
             movement_dim_size=constants.MOVEMENT_DIM_SIZE,
