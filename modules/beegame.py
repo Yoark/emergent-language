@@ -138,8 +138,8 @@ class BeeGameModule(nn.Module):
 
     def compute_cost(self, movements, votes):
         movement_cost = self.compute_movement_cost(movements)
-        vote_cost = self.compute_vote_cost(votes)
-        return vote_cost + movement_cost
+        vote_cost, max_freq = self.compute_vote_cost(votes)
+        return vote_cost + movement_cost, max_freq
 
     def compute_movement_cost(self, movements):
         return torch.sum(torch.sqrt(torch.sum(torch.pow(movements, 2), -1)))
@@ -157,7 +157,7 @@ class BeeGameModule(nn.Module):
         max_freq = self.max_freq(votes)
         value = self.value(votes)
         discount = d * (1 - torch.sigmoid(k * (max_freq - t)))
-        return -(value / discount).sum()
+        return -(value / discount).sum(), max_freq
 
     def value(self, votes):
         _, agent_vote = votes.max(2)

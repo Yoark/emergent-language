@@ -150,15 +150,15 @@ def print_losses(epoch, losses, dists, game_config):
     print("_________________________")
 
 def print_bee_losses(epoch, losses, game_config):
-    for swarm in range(game_config.num_swarm, game_config.num_swarm + 1):
-        for scout in range(game_config.num_scouts, game_config.num_scouts+1):
-            for hive in range(game_config.num_hives, game_config.num_hives+1):
-                loss = losses[swarm][scout][hive][-1] if len(losses[swarm][scout][hive]) > 0 else 0
-                min_loss = min(losses[swarm][scout][hive]) if len(losses[swarm][scout][hive]) > 0 else 0
+    swarm = game_config.num_swarm
+    scout = game_config.num_scouts
+    hive = game_config.num_hives
+            
+    loss = losses[swarm][scout][hive][-1] if len(losses[swarm][scout][hive]) > 0 else 0
+    min_loss = min(losses[swarm][scout][hive]) if len(losses[swarm][scout][hive]) > 0 else 0
 
-                print(
-                    "[epoch %d][%d swarm, %d scouts %d hives ][%d batches][last loss: %f][min loss: %f]"
-                    % (epoch, swarm, scout, hive, len(losses[swarm][scout][hive]), loss, min_loss))
+    print("[epoch %d][%d swarm, %d scouts %d hives ][%d batches][last loss: %f][min loss: %f]"
+        % (epoch, swarm, scout, hive, len(losses[swarm][scout][hive]), loss, min_loss))
     print("_________________________")
 
 
@@ -247,7 +247,8 @@ def main():
         num_scouts = game_config.num_scouts
         num_hives = game_config.num_hives
         num_agents = num_swarm + num_scouts
-
+        votes_ratio_per_ts = []
+        votes_ratio_per_epoch = []
         for epoch in range(training_config.num_epochs):
             agent.reset()
             game = BeeGameModule(game_config, num_swarm, num_scouts, num_hives)
@@ -256,9 +257,12 @@ def main():
                 
             optimizer.zero_grad()
 
-            total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
+            total_loss, timesteps, num_utter, utter_num_t, prob, votes_epoch, votes_ratios = agent(game)
 
             # output_filename = 'bee_game_epoch_{}_animation.mp4'.format(epoch)
+            ratio = game.max_freq(votes_epoch)
+            votes_ratio_per_epoch.append(ratio)
+            votes_ratio_per_ts.append(votes_ratios)
 
             num_utters.append(num_utter)
             utter_times.append(torch.mean(torch.Tensor(utter_num_t)))
@@ -283,9 +287,11 @@ def main():
         torch.save(agent, training_config.save_model_file)
         print("Saved agent model weights at %s" %
               training_config.save_model_file)
-
-    return num_utters, utter_times
+    if args['bee_game']:
+        return num_utters, utter_times, votes_ratio_per_epoch, votes_ratio_per_ts
+    else:
+        return num_utters, utter_times
 
 
 if __name__ == "__main__":
-    num_utters, utter_num_t = main()
+    num_utters, utter_num_t, votes_ratio_per_epoch, votes_ratio_per_ts = main()

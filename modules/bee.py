@@ -140,6 +140,8 @@ class BeeModule(nn.Module):
         timesteps = []
         utters = []
         utters_nums_t = []
+        votes_epoch = []
+        votes_ratio_t = []
         for t in range(self.time_horizon):
 
             votes = Variable(self.Tensor(game.batch_size, game.num_agents,
@@ -163,8 +165,9 @@ class BeeModule(nn.Module):
                 physical_feat = self.get_physical_feat(game, agent)
                 self.scouts_get_action(game, agent, physical_feat, utterance_feat,
                                        movements, utterances, votes)
-
-            cost = game(movements, utterances, votes)
+            votes_epoch.append(votes)
+            cost, max_freq = game(movements, utterances, votes)
+            votes_ratio_t.append(max_freq)
             self.total_cost += cost
 
             if self.penalizing_words:
@@ -183,6 +186,7 @@ class BeeModule(nn.Module):
                     timesteps[-1]['utterances'] = utterances
 
         utters = torch.cat(utters, 0)
+        votes_epoch = torch.cat(votes_epoch, 0)
         if self.using_cuda:
             utters = utters.cuda()
         prob = self.word_counter.word_counts / (
@@ -195,4 +199,4 @@ class BeeModule(nn.Module):
         self.total_cost += voc_cost
 
         num_utters = len(torch.unique(indices))
-        return self.total_cost, timesteps, num_utters, utters_nums_t, prob
+        return self.total_cost, timesteps, num_utters, utters_nums_t, prob, votes_epoch, votes_ratio_t
