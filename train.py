@@ -243,9 +243,9 @@ def main():
 
         num_utters = []
         utter_times = []
-        num_swarm = 3
-        num_scouts = 2
-        num_hives = 2
+        num_swarm = game_config.num_swarm
+        num_scouts = game_config.num_scouts
+        num_hives = game_config.num_hives
         num_agents = num_swarm + num_scouts
 
         for epoch in range(training_config.num_epochs):
