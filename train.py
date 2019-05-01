@@ -212,6 +212,7 @@ def main():
             per_agent_loss = total_loss.item(
             ) / num_agents / game_config.batch_size
             losses[num_agents][num_landmarks].append(per_agent_loss)
+            print(losses)
 
             dist = game.get_avg_agent_to_goal_distance()
             avg_dist = dist.item() / num_agents / game_config.batch_size
