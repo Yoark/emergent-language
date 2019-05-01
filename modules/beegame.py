@@ -134,9 +134,9 @@ class BeeGameModule(nn.Module):
 
         self.utterances = utterances
         self.votes = votes
-        return self.compute_cost(movements, utterances, votes)
+        return self.compute_cost(movements, votes)
 
-    def compute_cost(self, movements, utterances, votes):
+    def compute_cost(self, movements, votes):
         movement_cost = self.compute_movement_cost(movements)
         vote_cost = self.compute_vote_cost(votes)
         return vote_cost + movement_cost

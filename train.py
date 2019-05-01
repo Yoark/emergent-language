@@ -70,6 +70,25 @@ parser.add_argument(
     'if specified sets maximum number of landmarks in each episode (default 3)'
 )
 parser.add_argument(
+    '--num_swarm',
+    type=int,
+    help=
+    'set num of swarm'
+)
+parser.add_argument(
+    '--num_scouts',
+    type=int,
+    help=
+    'set num of scouts'
+)
+parser.add_argument(
+    '--num_hives',
+    type=int,
+    help=
+    'set num of hives'
+)
+
+parser.add_argument(
     '--min-landmarks',
     type=int,
     help=
@@ -117,8 +136,12 @@ def print_losses(epoch, losses, dists, game_config):
             loss = losses[a][l][-1] if len(losses[a][l]) > 0 else 0
             min_loss = min(losses[a][l]) if len(losses[a][l]) > 0 else 0
 
-            dist = dists[a][l][-1] if len(dists[a][l]) > 0 else 0
-            min_dist = min(dists[a][l]) if len(dists[a][l]) > 0 else 0
+            if dists:
+                dist = dists[a][l][-1] if len(dists[a][l]) > 0 else 0
+                min_dist = min(dists[a][l]) if len(dists[a][l]) > 0 else 0
+            else:
+                dist = -1
+                min_dist = -1
 
             print(
                 "[epoch %d][%d agents, %d landmarks][%d batches][last loss: %f][min loss: %f][last dist: %f][min dist: %f]"
@@ -126,9 +149,22 @@ def print_losses(epoch, losses, dists, game_config):
                    min_dist))
     print("_________________________")
 
+def print_bee_losses(epoch, losses, game_config):
+    for swarm in range(game_config.num_swarm, game_config.num_swarm + 1):
+        for scout in range(game_config.num_scouts, game_config.num_scouts+1):
+            for hive in range(game_config.num_hives, game_config.num_hives+1):
+                loss = losses[swarm][scout][hive][-1] if len(losses[swarm][scout][hive]) > 0 else 0
+                min_loss = min(losses[swarm][scout][hive]) if len(losses[swarm][scout][hive]) > 0 else 0
+
+                print(
+                    "[epoch %d][%d swarm, %d scouts %d hives ][%d batches][last loss: %f][min loss: %f]"
+                    % (epoch, swarm, scout, hive, len(losses[swarm][scout][hive]), loss, min_loss))
+    print("_________________________")
+
 
 def main():
     args = vars(parser.parse_args())
+    
     training_config = configs.get_training_config(args)
     print("Training with config:")
     print(training_config)
@@ -190,11 +226,13 @@ def main():
                 scheduler.step(
                     losses[game_config.max_agents][game_config.max_landmarks][-1])
     else:
-        game_config = configs.get_game_config(args)
+        
+        game_config = configs.get_beegame_config(args)
         agent_config = configs.get_bee_config(args)
         print(game_config)
         print(agent_config)
         agent = BeeModule(agent_config)
+        losses = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         if training_config.use_cuda:
             agent = agent.cuda()
 
@@ -206,6 +244,8 @@ def main():
         num_swarm = 10
         num_scouts = 3
         num_hives = 2
+        num_agents = num_swarm + num_scouts
+
         for epoch in range(training_config.num_epochs):
             agent.reset()
             game = BeeGameModule(game_config, num_swarm, num_scouts, num_hives)
@@ -224,13 +264,16 @@ def main():
             if epoch % 10 == 0:
                 print(prob)
                 # animate(timesteps, output_filename, num_agents)
-
-            print_losses(epoch, losses, [], game_config)
+            per_agent_loss = total_loss.item(
+            ) / num_agents / game_config.batch_size
+            print(per_agent_loss)
+            losses[num_swarm][num_scouts][num_hives].append(per_agent_loss)           
+            print_bee_losses(epoch, losses, game_config)
 
             total_loss.backward()
             optimizer.step()
 
-            scheduler.step(losses[num_swarm + num_scouts][num_hives][-1])
+            scheduler.step(losses[num_swarm][num_scouts][num_hives][-1])
 
     if training_config.save_model:
         #print(agent.LOG)

@@ -58,10 +58,9 @@ GameConfig = NamedTuple('GameConfig', [
 BeeGameConfig = NamedTuple('BeeGameConfig', [
     ('batch_size', int),
     ('world_dim', Any),
-    ('max_agents', int),
-    ('max_landmarks', int),
-    ('min_agents', int),
-    ('min_landmarks', int),
+    ('num_swarm', int),
+    ('num_scouts', int),
+    ('num_hives', int),
     ('num_shapes', int),
     ('num_colors', int),
     ('use_utterances', bool),
@@ -193,10 +192,9 @@ default_game_config = GameConfig(
 default_beegame_config = BeeGameConfig(
         DEFAULT_BATCH_SIZE,
         DEFAULT_WORLD_DIM,
-        MAX_AGENTS,
-        MAX_LANDMARKS,
-        MIN_AGENTS,
-        MIN_LANDMARKS,
+        NUM_SWARM,
+        NUM_SCOUT,
+        NUM_HIVE,
         NUM_SHAPES,
         NUM_COLORS,
         USE_UTTERANCES,
@@ -204,6 +202,7 @@ default_beegame_config = BeeGameConfig(
         DEFAULT_HIDDEN_SIZE,
         False
         )
+
 
 if USE_UTTERANCES:
     feat_size = DEFAULT_FEAT_VEC_SIZE*3
@@ -271,6 +270,22 @@ def get_game_config(kwargs):
             vocab_size=kwargs['vocab_size'] or default_game_config.vocab_size,
             memory_size=default_game_config.memory_size,
             use_cuda=kwargs['use_cuda']
+            )
+
+def get_beegame_config(kwargs):
+    return BeeGameConfig(
+            batch_size=kwargs['batch_size'] or default_beegame_config.batch_size,
+            world_dim=kwargs['world_dim'] or default_beegame_config.world_dim,
+            num_swarm=kwargs['num_swarm'] or default_beegame_config.num_swarm,
+            num_scouts=kwargs['num_scouts'] or default_beegame_config.num_scouts,
+            num_hives=kwargs['num_hives'] or default_beegame_config.num_hives,
+            
+            num_shapes=kwargs['num_shapes'] or default_beegame_config.num_shapes,
+            num_colors=kwargs['num_colors'] or default_beegame_config.num_colors,
+            use_utterances=not kwargs['no_utterances'],
+            vocab_size=kwargs['vocab_size'] or default_beegame_config.vocab_size,
+            memory_size=default_beegame_config.memory_size,
+            use_cuda=kwargs['use_cuda'] or default_beegame_config.use_cuda
             )
 
 def get_agent_config(kwargs):
