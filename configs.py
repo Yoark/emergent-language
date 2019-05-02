@@ -385,7 +385,7 @@ def get_bee_config(kwargs):
             physical_processor=default_agent_config.physical_processor,
             swarm_action_processor=swarm_action_processor,
             scout_action_processor=scout_action_processor,
-            vote_processor=get_processor_config_with_input_size(NUM_HIVE),
+            vote_processor=get_processor_config_with_input_size(kwargs['num_hives']),
             word_counter=word_counter,
             
             vocab_size=vocab_size,
