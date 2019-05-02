@@ -146,6 +146,7 @@ class BeeModule(nn.Module):
 
             votes = Variable(self.Tensor(game.batch_size, game.num_agents,
                                 self.num_hives))
+            import ipdb; ipdb.set_trace()
             utterances = Variable(self.Tensor(game.batch_size, game.num_agents,
                                      self.vocab_size))
             movements = Variable(self.Tensor(game.batch_size, game.num_entities,
