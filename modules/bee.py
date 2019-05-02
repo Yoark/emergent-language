@@ -9,8 +9,8 @@ from modules.word_counting import WordCountingModule
 from modules.agent import AgentModule
 from .swarm_action import SwarmActModule
 from .scout_action import ScoutActModule
-
 """ Swarm action defining"""
+
 
 class BeeModule(nn.Module):
     def __init__(self, config):
@@ -18,19 +18,22 @@ class BeeModule(nn.Module):
         self.init_from_config(config)
         self.total_cost = Variable(self.Tensor(1).zero_())
         # config need to be added, need to create scoutActmodule
-        self.swarm_action_processor = SwarmActModule(config.swarm_action_processor)
+        self.swarm_action_processor = SwarmActModule(
+            config.swarm_action_processor)
         self.num_hives = config.num_hives
         self.utterance_processor = ProcessingModule(config.utterance_processor)
-        self.scout_action_processor = ScoutActModule(config.scout_action_processor)
+        self.scout_action_processor = ScoutActModule(
+            config.scout_action_processor)
         self.num_scout = config.num_scout
         self.num_swarm = config.num_swarm
         self.physical_processor = ProcessingModule(config.physical_processor)
         self.physical_pooling = nn.AdaptiveAvgPool2d((1, config.feat_vec_size))
-        self.utterance_pooling = nn.AdaptiveAvgPool2d((1, config.feat_vec_size))
-        
+        self.utterance_pooling = nn.AdaptiveAvgPool2d((1,
+                                                       config.feat_vec_size))
+
         self.vote_processor = ProcessingModule(config.vote_processor)
         self.vote_pooling = nn.AdaptiveAvgPool2d((1, config.feat_vec_size))
-        
+
         if self.penalizing_words:
             self.word_counter = WordCountingModule(config.word_counter)
 
@@ -44,7 +47,7 @@ class BeeModule(nn.Module):
         self.vocab_size = config.vocab_size
         self.processing_hidden_size = config.physical_processor.hidden_size
         self.Tensor = torch.cuda.FloatTensor if self.using_cuda else torch.FloatTensor
-    
+
     def reset(self):
         self.total_cost = torch.zeros_like(self.total_cost)
         if self.using_utterances and self.penalizing_words:
@@ -68,27 +71,29 @@ class BeeModule(nn.Module):
         """
         """
         #! WHat memory should it use?
-        utterance, vote, new_mem = self.swarm_action_processor(utterance_feat, game.memories["action"][:, agent],
-        self.training)
+        utterance, vote, new_mem = self.swarm_action_processor(
+            utterance_feat, game.memories["action"][:, agent], self.training)
         self.update_mem(game, "action", new_mem, agent)
         votes[:, agent, :] = vote
         utterances[:, agent, :] = utterance
 
-    def scouts_get_action(self,game, agent, physical_feat, utterance_feat,
+    def scouts_get_action(self, game, agent, physical_feat, utterance_feat,
                           movements, utterances, votes):
         #* Good
-        vote, movement, utterance, new_mem = self.scout_action_processor(physical_feat, utterance_feat,
-                                             game.memories["action"][:, agent],
-                                             self.training)
+        vote, movement, utterance, new_mem = self.scout_action_processor(
+            physical_feat, utterance_feat, game.memories["action"][:, agent],
+            self.training)
         self.update_mem(game, "action", new_mem, agent)
         movements[:, agent, :] = movement
         votes[:, agent, :] = vote
         utterances[:, agent, :] = utterance
 
-    def process_utterances(self, game, agent, other_agent, utterance_processes):
+    def process_utterances(self, game, agent, other_agent,
+                           utterance_processes):
         #* Good
-        utterance_processed, new_mem = self.utterance_processor(game.utterances[:, other_agent],
-                                            game.memories["utterance"][:, agent, other_agent])
+        utterance_processed, new_mem = self.utterance_processor(
+            game.utterances[:, other_agent],
+            game.memories["utterance"][:, agent, other_agent])
         self.update_mem(game, "utterance", new_mem, agent, other_agent)
         utterance_processes[:, other_agent, :] = utterance_processed
 
@@ -112,8 +117,9 @@ class BeeModule(nn.Module):
         """
         gets observed utterances feature vector for a agent.
         """
-        utterance_processes = Variable(self.Tensor(game.batch_size, game.num_scouts,
-                              self.processing_hidden_size))
+        utterance_processes = Variable(
+            self.Tensor(game.batch_size, game.num_scouts,
+                        self.processing_hidden_size))
         for other_agent in range(game.num_scouts):
             self.process_utterances(game, agent, other_agent,
                                     utterance_processes)
@@ -144,28 +150,31 @@ class BeeModule(nn.Module):
         votes_ratio_t = []
         for t in range(self.time_horizon):
 
-            votes = Variable(self.Tensor(game.batch_size, game.num_agents,
-                                self.num_hives))
-            import ipdb; ipdb.set_trace()
-            utterances = Variable(self.Tensor(game.batch_size, game.num_agents,
-                                     self.vocab_size))
-            movements = Variable(self.Tensor(game.batch_size, game.num_entities,
-                                    self.movement_dim_size)).zero_()
+            votes = Variable(
+                self.Tensor(game.batch_size, game.num_agents, self.num_hives))
+            utterances = Variable(
+                self.Tensor(game.batch_size, game.num_agents, self.vocab_size))
+            movements = Variable(
+                self.Tensor(game.batch_size, game.num_entities,
+                            self.movement_dim_size)).zero_()
 
             for agent in range(game.num_swarm):
                 utterance_feat = self.get_utterance_feat(game, agent)
                 #? vote_feat = self.get_vote_feat(game, agent)
                 # ? physical_feat = self.get_physical_feat(game, agent)
                 # Divide the utterances, movement to two divisions or not?
-                
-                self.swarm_get_action(game, agent, utterance_feat, votes, utterances)
 
-            for agent in range(game.num_swarm, game.num_swarm + game.num_scouts):
+                self.swarm_get_action(game, agent, utterance_feat, votes,
+                                      utterances)
+
+            for agent in range(game.num_swarm,
+                               game.num_swarm + game.num_scouts):
                 utterance_feat = self.get_utterance_feat(game, agent)
                 # vote_feat = self.get_vote_feat(game, agent)
                 physical_feat = self.get_physical_feat(game, agent)
-                self.scouts_get_action(game, agent, physical_feat, utterance_feat,
-                                       movements, utterances, votes)
+                self.scouts_get_action(game, agent, physical_feat,
+                                       utterance_feat, movements, utterances,
+                                       votes)
             votes_epoch.append(votes)
             cost, max_freq = game(movements, utterances, votes)
             votes_ratio_t.append(max_freq)
