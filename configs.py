@@ -356,7 +356,7 @@ def get_bee_config(kwargs):
             vocab_size=vocab_size,
             use_utterances=use_utterances,
             use_cuda=use_cuda,
-            num_hives=NUM_HIVE
+            num_hives=kwargs['num_hives'] or default_beegame_config.num_hives
             )
     scout_action_processor = ScoutActModuleConfig(
             action_processor=get_processor_config_with_input_size(2*DEFAULT_FEAT_VEC_SIZE),
@@ -367,7 +367,7 @@ def get_bee_config(kwargs):
             vocab_size=vocab_size,
             use_utterances=use_utterances,
             use_cuda=use_cuda,
-            num_hives=NUM_HIVE
+            num_hives=kwargs['num_hives'] or default_beegame_config.num_hives
             )
     word_counter = WordCountingModuleConfig(
             vocab_size=vocab_size,
