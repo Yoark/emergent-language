@@ -3,12 +3,9 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 from modules.processing import ProcessingModule
-from modules.goal_predicting import GoalPredictingProcessingModule
-from modules.action import ActionModule
+from modules.scout_action import ScoutActModule
+from modules.swarm_action import SwarmActModule
 from modules.word_counting import WordCountingModule
-from modules.agent import AgentModule
-from swarm_action import SwarmActModule
-from scout_action import ScoutActModule
 """ Swarm action defining"""
 
 
