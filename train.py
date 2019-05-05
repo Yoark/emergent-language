@@ -35,47 +35,61 @@ parser.add_argument(
 parser.add_argument(
     '--learning-rate',
     type=float,
+    default=1e-3,
     help='if specified sets learning rate (default 1e-3)')
 parser.add_argument(
-    '--batch-size', type=int, help='if specified sets batch size(default 256)')
+    '--batch-size',
+    type=int,
+    default=256,
+    help='if specified sets batch size(default 256)')
 parser.add_argument(
     '--n-timesteps',
     '-t',
     type=int,
+    default=32,
     help='if specified sets timestep length of each episode (default 32)')
 parser.add_argument(
     '--num-shapes',
     '-s',
     type=int,
+    default=3,
     help='if specified sets number of colors (default 3)')
 parser.add_argument(
     '--num-colors',
     '-c',
     type=int,
+    default=3,
     help='if specified sets number of shapes (default 3)')
 parser.add_argument(
     '--max-agents',
     type=int,
+    default=3,
     help=
     'if specified sets maximum number of agents in each episode (default 3)')
 parser.add_argument(
     '--min-agents',
     type=int,
+    default=1,
     help=
     'if specified sets minimum number of agents in each episode (default 1)')
 parser.add_argument(
     '--max-landmarks',
     type=int,
+    default=3,
     help=
     'if specified sets maximum number of landmarks in each episode (default 3)'
 )
-parser.add_argument('--num-swarm', type=int, help='set num of swarm')
-parser.add_argument('--num-scouts', type=int, help='set num of scouts')
-parser.add_argument('--num-hives', type=int, help='set num of hives')
+parser.add_argument(
+    '--num-swarm', type=int, default=10, help='set num of swarm')
+parser.add_argument(
+    '--num-scouts', type=int, default=2, help='set num of scouts')
+parser.add_argument(
+    '--num-hives', type=int, default=4, help='set num of hives')
 
 parser.add_argument(
     '--min-landmarks',
     type=int,
+    default=1,
     help=
     'if specified sets minimum number of landmarks in each episode (default 1)'
 )
@@ -83,11 +97,13 @@ parser.add_argument(
     '--vocab-size',
     '-v',
     type=int,
-    help='if specified sets maximum vocab size in each episode (default 6)')
+    default=20,
+    help='if specified sets maximum vocab size in each episode (default 20)')
 parser.add_argument(
     '--world-dim',
     '-w',
     type=int,
+    default=16,
     help=
     'if specified sets the side length of the square grid where all agents and landmarks spawn(default 16)'
 )
@@ -95,8 +111,9 @@ parser.add_argument(
     '--oov-prob',
     '-o',
     type=int,
+    default=1,
     help=
-    'higher value penalize uncommon words less when penalizing words (default 6)'
+    'higher value penalize uncommon words less when penalizing words (default 1)'
 )
 parser.add_argument(
     '--load-model-weights',
