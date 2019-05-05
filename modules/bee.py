@@ -7,8 +7,8 @@ from modules.goal_predicting import GoalPredictingProcessingModule
 from modules.action import ActionModule
 from modules.word_counting import WordCountingModule
 from modules.agent import AgentModule
-from .swarm_action import SwarmActModule
-from .scout_action import ScoutActModule
+from swarm_action import SwarmActModule
+from scout_action import ScoutActModule
 """ Swarm action defining"""
 
 
@@ -163,7 +163,6 @@ class BeeModule(nn.Module):
                 #? vote_feat = self.get_vote_feat(game, agent)
                 # ? physical_feat = self.get_physical_feat(game, agent)
                 # Divide the utterances, movement to two divisions or not?
-
                 self.swarm_get_action(game, agent, utterance_feat, votes,
                                       utterances)
 

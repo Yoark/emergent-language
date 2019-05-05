@@ -134,7 +134,9 @@ class BeeGameModule(nn.Module):
         for batch, hive_locs in enumerate(hive_locations):
             agent_locs = agent_baselines[batch]
             for hive_idx, hive_loc in enumerate(hive_locs):
-                if any(torch.sum(torch.pow((agent_locs - hive_loc), 2), -1) < self.find_hive_epsilon):
+                if any(
+                        torch.sum(torch.pow((agent_locs - hive_loc), 2), -1) <
+                        self.find_hive_epsilon):
                     self.hive_mask[batch][hive_idx] = 1
         self.observations = self.locations.unsqueeze(
             1) - agent_baselines.unsqueeze(2)
@@ -182,6 +184,7 @@ class BeeGameModule(nn.Module):
         #! assume votes: [batch, num_agents, num_hives]
         #? [batch, 1]
         _, agent_vote = votes.max(2)
-        per_batch_vote_count = torch.stack([(agent_vote == vote).sum(1)
-                                          for vote in agent_vote.unique()]).transpose(0, 1)
+        per_batch_vote_count = torch.stack([
+            (agent_vote == vote).sum(1) for vote in agent_vote.unique()
+        ]).transpose(0, 1)
         return torch.max(per_batch_vote_count.float() / self.num_agents, 1)[0]

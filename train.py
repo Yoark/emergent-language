@@ -69,24 +69,9 @@ parser.add_argument(
     help=
     'if specified sets maximum number of landmarks in each episode (default 3)'
 )
-parser.add_argument(
-    '--num_swarm',
-    type=int,
-    help=
-    'set num of swarm'
-)
-parser.add_argument(
-    '--num_scouts',
-    type=int,
-    help=
-    'set num of scouts'
-)
-parser.add_argument(
-    '--num_hives',
-    type=int,
-    help=
-    'set num of hives'
-)
+parser.add_argument('--num-swarm', type=int, help='set num of swarm')
+parser.add_argument('--num-scouts', type=int, help='set num of scouts')
+parser.add_argument('--num-hives', type=int, help='set num of hives')
 
 parser.add_argument(
     '--min-landmarks',
@@ -149,30 +134,34 @@ def print_losses(epoch, losses, dists, game_config):
                    min_dist))
     print("_________________________")
 
+
 def print_bee_losses(epoch, losses, game_config):
     swarm = game_config.num_swarm
     scout = game_config.num_scouts
     hive = game_config.num_hives
-            
-    loss = losses[swarm][scout][hive][-1] if len(losses[swarm][scout][hive]) > 0 else 0
-    min_loss = min(losses[swarm][scout][hive]) if len(losses[swarm][scout][hive]) > 0 else 0
 
-    print("[epoch %d][%d swarm, %d scouts %d hives ][%d batches][last loss: %f][min loss: %f]"
-        % (epoch, swarm, scout, hive, len(losses[swarm][scout][hive]), loss, min_loss))
+    loss = losses[swarm][scout][hive][-1] if len(
+        losses[swarm][scout][hive]) > 0 else 0
+    min_loss = min(losses[swarm][scout][hive]) if len(
+        losses[swarm][scout][hive]) > 0 else 0
+
+    print(
+        "[epoch %d][%d swarm, %d scouts %d hives ][%d batches][last loss: %f][min loss: %f]"
+        % (epoch, swarm, scout, hive, len(losses[swarm][scout][hive]), loss,
+           min_loss))
     print("_________________________")
 
 
 def main():
     args = vars(parser.parse_args())
-    
+
     training_config = configs.get_training_config(args)
     print("Training with config:")
     print(training_config)
-    
 
     if not args['bee_game']:
         losses = defaultdict(lambda: defaultdict(list))
-        dists = defaultdict(lambda: defaultdict(list))      
+        dists = defaultdict(lambda: defaultdict(list))
         game_config = configs.get_game_config(args)
         agent_config = configs.get_agent_config(args)
         print(game_config)
@@ -180,16 +169,18 @@ def main():
         agent = AgentModule(agent_config)
         if training_config.use_cuda:
             agent = agent.cuda()
-        optimizer = RMSprop(agent.parameters(), lr=training_config.learning_rate)
-        scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
+        optimizer = RMSprop(
+            agent.parameters(), lr=training_config.learning_rate)
+        scheduler = ReduceLROnPlateau(
+            optimizer, 'min', verbose=True, cooldown=5)
 
         num_utters = []
         utter_times = []
         for epoch in range(training_config.num_epochs):
             num_agents = np.random.randint(game_config.min_agents,
-                                        game_config.max_agents + 1)
+                                           game_config.max_agents + 1)
             num_landmarks = np.random.randint(game_config.min_landmarks,
-                                            game_config.max_landmarks + 1)
+                                              game_config.max_landmarks + 1)
             agent.reset()
             game = GameModule(game_config, num_agents, num_landmarks)
 
@@ -197,10 +188,8 @@ def main():
                 game = game.cuda()
             optimizer.zero_grad()
 
-            
             total_loss, timesteps, num_utter, utter_num_t, prob = agent(game)
-            
-                
+
             output_filename = 'epoch_{}_animation.mp4'.format(epoch)
 
             num_utters.append(num_utter)
@@ -225,10 +214,10 @@ def main():
             optimizer.step()
 
             if num_agents == game_config.max_agents and num_landmarks == game_config.max_landmarks:
-                scheduler.step(
-                    losses[game_config.max_agents][game_config.max_landmarks][-1])
+                scheduler.step(losses[game_config.max_agents][
+                    game_config.max_landmarks][-1])
     else:
-        
+
         game_config = configs.get_beegame_config(args)
         agent_config = configs.get_bee_config(args)
         print(game_config)
@@ -238,8 +227,10 @@ def main():
         if training_config.use_cuda:
             agent = agent.cuda()
 
-        optimizer = RMSprop(agent.parameters(), lr=training_config.learning_rate)
-        scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, cooldown=5)
+        optimizer = RMSprop(
+            agent.parameters(), lr=training_config.learning_rate)
+        scheduler = ReduceLROnPlateau(
+            optimizer, 'min', verbose=True, cooldown=5)
 
         num_utters = []
         utter_times = []
@@ -254,14 +245,15 @@ def main():
             game = BeeGameModule(game_config, num_swarm, num_scouts, num_hives)
             if training_config.use_cuda:
                 game = game.cuda()
-                
+
             optimizer.zero_grad()
 
-            total_loss, timesteps, num_utter, utter_num_t, prob, votes_epoch, votes_ratios = agent(game)
+            total_loss, timesteps, num_utter, utter_num_t, prob, votes_epoch, votes_ratios = agent(
+                game)
 
             # output_filename = 'bee_game_epoch_{}_animation.mp4'.format(epoch)
             ratio = game.max_freq(votes_epoch).mean()
-            
+
             votes_ratio_per_epoch.append(ratio)
             votes_ratio_per_ts.append(votes_ratios)
 
@@ -273,9 +265,9 @@ def main():
                 # animate(timesteps, output_filename, num_agents)
             per_agent_loss = total_loss.item(
             ) / num_agents / game_config.batch_size
-            
-            losses[num_swarm][num_scouts][num_hives].append(per_agent_loss)  
-            
+
+            losses[num_swarm][num_scouts][num_hives].append(per_agent_loss)
+
             print_bee_losses(epoch, losses, game_config)
 
             total_loss.backward()
