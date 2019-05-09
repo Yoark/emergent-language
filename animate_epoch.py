@@ -94,18 +94,16 @@ def animate(timesteps, output_filename, num_agents):
     anim.save(output_filename, writer=writer)
 
 
-bee_artists = []
+bee_artists = {}
 bee_count = 0
 
 
-def _updateBee(t, num_agents, ax):
+def _updateBee(t, num_agents, num_swarm, a0, a1):
     locations = t['locations']
     physical = t['physical']
     votes = t['votes']
     hive_mask = t['hive_mask']
     hive_values = t['hive_values']
-    # import ipdb
-    # ipdb.set_trace()
 
     _, agent_vote = votes.max(1)
     agent_vote += num_agents
@@ -117,19 +115,37 @@ def _updateBee(t, num_agents, ax):
 
     global bee_artists
     global bee_count
-    ax.set_title('timestep: {}'.format(bee_count), fontsize=16)
+    a0.set_title('timestep: {}'.format(bee_count), fontsize=16)
+    a1.set_title('vote counts', fontsize=16)
+
+    # import ipdb
+    # ipdb.set_trace()
+    unique_votes = agent_vote.unique()
+    vote_count = {}
+    for vote in unique_votes:
+        vote_count[vote.item()] = (agent_vote == vote).sum().item()
+
+    vote_targets = list(vote_count.keys())
+    a1.bar(
+        list(map(str, vote_targets)),
+        vote_count.values(),
+        color=[get_color(vote) for vote in vote_targets])
 
     bee_count += 1
     if not bee_artists:
         for idx, loc in enumerate(locations):
             loc_list = loc.tolist()
-            if idx < num_agents:
+            if idx < num_swarm:
+                continue
+            elif idx < num_agents:
                 vote = agent_vote[idx]
                 patch = patches.Circle(
                     loc_list, radius=0.3, fc=get_color(vote))
             else:
                 hidden = hive_mask[idx - num_agents].item() == 0
-                plt.text(
+                # import ipdb
+                # ipdb.set_trace()
+                a0.text(
                     loc_list[0],
                     loc_list[1] - 0.5,
                     'value: {:.3f}{}'.format(
@@ -144,13 +160,13 @@ def _updateBee(t, num_agents, ax):
                         fc=(1., 0.8, 0.8),
                     ))
                 patch = patches.Rectangle(
-                    loc_list, width=0.2, height=0.2, fc=get_color(idx))
-            bee_artists.append(ax.add_patch(patch))
+                    loc_list, width=0.4, height=0.4, fc=get_color(idx))
+            bee_artists[idx] = a0.add_patch(patch)
     else:
-        for idx, artist in enumerate(bee_artists):
-            if idx < num_agents:
-                vote = agent_vote[idx]
-                artist.set_color(get_color(vote))
+        for idx, artist in bee_artists.items():
+            # if num_swarm <= idx < num_agents:
+            #     vote = agent_vote[idx]
+            #     artist.set_color(get_color(vote))
             loc_list = locations[idx].tolist()
             if isinstance(artist, patches.Circle):
                 artist.set_center(loc_list)
@@ -160,15 +176,17 @@ def _updateBee(t, num_agents, ax):
                 raise Exception("artist should be circle or rectangle")
 
 
-def animateBee(timesteps, output_filename, num_agents):
-    fig = plt.figure(figsize=(20, 20))
+def animateBee(timesteps, output_filename, num_agents, num_swarm):
+    # fig = plt.figure(figsize=(20, 20))
+    fig, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [2, 1]})
     plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
-    fig.set_size_inches(20, 20)
-    ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
+    fig.set_size_inches(30, 20)
+    a0.set_xlim([0, DEFAULT_WORLD_DIM])
+    a0.set_ylim([0, DEFAULT_WORLD_DIM])
 
     global bee_artists
     global bee_count
-    bee_artists = []
+    bee_artists = {}
     bee_count = 0
 
     batch = 99
@@ -185,7 +203,7 @@ def animateBee(timesteps, output_filename, num_agents):
     anim = animation.FuncAnimation(
         fig,
         _updateBee,
-        fargs=(num_agents, ax),
+        fargs=(num_agents, num_swarm, a0, a1),
         frames=timesteps,
         repeat=False)
     writer = animation.writers['ffmpeg'](fps=2)

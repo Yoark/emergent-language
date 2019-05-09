@@ -269,8 +269,7 @@ def main():
                 game)
 
             output_filename = 'bee_game_epoch_{}_animation.mp4'.format(epoch)
-            animateBee(timesteps, output_filename, num_agents)
-
+            animateBee(timesteps, output_filename, num_agents, num_swarm)
 
             ratio = game.max_freq(votes_epoch).mean()
 
