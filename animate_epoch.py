@@ -103,6 +103,9 @@ def _updateBee(t, num_agents, ax):
     physical = t['physical']
     votes = t['votes']
     hive_mask = t['hive_mask']
+    hive_values = t['hive_values']
+    # import ipdb
+    # ipdb.set_trace()
 
     _, agent_vote = votes.max(1)
     agent_vote += num_agents
@@ -116,8 +119,6 @@ def _updateBee(t, num_agents, ax):
     global bee_count
     ax.set_title('timestep: {}'.format(bee_count), fontsize=16)
 
-    import ipdb
-    ipdb.set_trace()
     bee_count += 1
     if not bee_artists:
         for idx, loc in enumerate(locations):
@@ -127,6 +128,19 @@ def _updateBee(t, num_agents, ax):
                 patch = patches.Circle(
                     loc_list, radius=0.3, fc=get_color(vote))
             else:
+                plt.text(
+                    loc_list[0],
+                    loc_list[1] - 0.5,
+                    'value: {:.3f}'.format(
+                        hive_values[idx - num_agents].item()),
+                    size=10,
+                    ha="center",
+                    va="center",
+                    bbox=dict(
+                        boxstyle="round",
+                        ec=(1., 0.5, 0.5),
+                        fc=(1., 0.8, 0.8),
+                    ))
                 patch = patches.Rectangle(
                     loc_list, width=0.2, height=0.2, fc=get_color(idx))
             bee_artists.append(ax.add_patch(patch))
