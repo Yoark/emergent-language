@@ -4,6 +4,20 @@ from matplotlib import pyplot as plt
 
 from configs import DEFAULT_WORLD_DIM
 
+base_colors = [
+    'red',
+    'blue',
+    'green',
+    'yellow',
+    'orange',
+    'pink',
+    'grey',
+]
+
+COLORS = ['xkcd:{}'.format(color) for color in base_colors]
+COLORS.extend(['xkcd:light {}'.format(color) for color in base_colors])
+COLORS.extend(['xkcd:dark {}'.format(color) for color in base_colors])
+
 artists = []
 
 count = 0
@@ -18,7 +32,7 @@ def _update(t, num_agents, ax):
     def get_color(idx):
         if isinstance(idx, torch.Tensor):
             idx = idx.item()
-        return 'C{}'.format(idx)
+        return COLORS[idx]
 
     global artists
     global count
@@ -98,7 +112,7 @@ def _updateBee(t, num_agents, ax):
     def get_color(idx):
         if isinstance(idx, torch.Tensor):
             idx = idx.item()
-        return 'C{}'.format(idx)
+        return COLORS[idx]
 
     global bee_artists
     global bee_count
@@ -118,6 +132,9 @@ def _updateBee(t, num_agents, ax):
             bee_artists.append(ax.add_patch(patch))
     else:
         for idx, artist in enumerate(bee_artists):
+            if idx < num_agents:
+                vote = agent_vote[idx]
+                artist.set_color(get_color(vote))
             loc_list = locations[idx].tolist()
             if isinstance(artist, patches.Circle):
                 artist.set_center(loc_list)
