@@ -130,14 +130,18 @@ class BeeGameModule(nn.Module):
         #? update location and compute cost
         self.locations = self.locations + movements
         hive_locations = self.locations[:, self.num_agents:]
-        agent_baselines = self.locations[:, :self.num_agents]
+
+        # Update hive mask by seeing whether any scouts are nearby
+        scout_locations = self.locations[:, self.num_swarm:self.num_agents]
         for batch, hive_locs in enumerate(hive_locations):
-            agent_locs = agent_baselines[batch]
+            agent_locs = scout_locations[batch]
             for hive_idx, hive_loc in enumerate(hive_locs):
                 if any(
                         torch.sum(torch.pow((agent_locs - hive_loc), 2), -1) <
                         self.find_hive_epsilon):
                     self.hive_mask[batch][hive_idx] = 1
+
+        agent_baselines = self.locations[:, :self.num_agents]
         self.observations = self.locations.unsqueeze(
             1) - agent_baselines.unsqueeze(2)
 
