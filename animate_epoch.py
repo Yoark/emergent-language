@@ -166,6 +166,11 @@ def animateBee(timesteps, output_filename, num_agents):
     fig.set_size_inches(20, 20)
     ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
 
+    global bee_artists
+    global bee_count
+    bee_artists = []
+    bee_count = 0
+
     batch = 99
 
     def pick_batch(timestep, key):
