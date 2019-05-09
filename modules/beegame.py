@@ -23,8 +23,6 @@ from modules.game import GameModule
     accumulators:
         -movements
         -utterances
-    TODO
-
 
 
     Game consists of :
@@ -60,7 +58,8 @@ class BeeGameModule(nn.Module):
         else:
             self.Tensor = torch.FloatTensor
 
-        self.find_hive_epsilon = 0.5
+        # l2 norm squared threshold for discovering hives
+        self.find_hive_epsilon = 4
 
         hive_mask = torch.zeros(self.batch_size, self.num_hives, 1)
         hive_values = torch.rand(self.batch_size, self.num_hives, 1)
