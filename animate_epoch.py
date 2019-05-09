@@ -105,9 +105,7 @@ def _updateBee(t, num_agents, ax):
     hive_mask = t['hive_mask']
 
     _, agent_vote = votes.max(1)
-
-    # import ipdb
-    # ipdb.set_trace()
+    agent_vote += num_agents
 
     def get_color(idx):
         if isinstance(idx, torch.Tensor):
@@ -118,6 +116,8 @@ def _updateBee(t, num_agents, ax):
     global bee_count
     ax.set_title('timestep: {}'.format(bee_count), fontsize=16)
 
+    import ipdb
+    ipdb.set_trace()
     bee_count += 1
     if not bee_artists:
         for idx, loc in enumerate(locations):
