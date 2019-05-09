@@ -53,17 +53,17 @@ def _update(t, num_agents, ax):
 
 
 def animate(timesteps, output_filename, num_agents):
+    fig = plt.figure(figsize=(20, 20))
+    plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
+    fig.set_size_inches(20, 20)
+    ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
+
     global artists
     global count
     artists = []
     count = 0
     # only consider a particular batch
     batch = 99
-
-    fig = plt.figure(figsize=(20, 20))
-    plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
-    fig.set_size_inches(20, 20)
-    ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
 
     def pick_batch(timestep, key):
         timestep[key] = timestep[key][batch]
@@ -76,5 +76,79 @@ def animate(timesteps, output_filename, num_agents):
 
     anim = animation.FuncAnimation(
         fig, _update, fargs=(num_agents, ax), frames=timesteps, repeat=False)
+    writer = animation.writers['ffmpeg'](fps=2)
+    anim.save(output_filename, writer=writer)
+
+
+bee_artists = []
+bee_count = 0
+
+
+def _updateBee(t, num_agents, ax):
+    locations = t['locations']
+    physical = t['physical']
+    votes = t['votes']
+    hive_mask = t['hive_mask']
+
+    _, agent_vote = votes.max(1)
+
+    # import ipdb
+    # ipdb.set_trace()
+
+    def get_color(idx):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.item()
+        return 'C{}'.format(idx)
+
+    global bee_artists
+    global bee_count
+    ax.set_title('timestep: {}'.format(bee_count), fontsize=16)
+
+    bee_count += 1
+    if not bee_artists:
+        for idx, loc in enumerate(locations):
+            loc_list = loc.tolist()
+            if idx < num_agents:
+                vote = agent_vote[idx]
+                patch = patches.Circle(
+                    loc_list, radius=0.3, fc=get_color(vote))
+            else:
+                patch = patches.Rectangle(
+                    loc_list, width=0.2, height=0.2, fc=get_color(idx))
+            bee_artists.append(ax.add_patch(patch))
+    else:
+        for idx, artist in enumerate(bee_artists):
+            loc_list = locations[idx].tolist()
+            if isinstance(artist, patches.Circle):
+                artist.set_center(loc_list)
+            elif isinstance(artist, patches.Rectangle):
+                artist.set_xy(loc_list)
+            else:
+                raise Exception("artist should be circle or rectangle")
+
+
+def animateBee(timesteps, output_filename, num_agents):
+    fig = plt.figure(figsize=(20, 20))
+    plt.subplots_adjust(left=0.2, right=0.8, top=0.75, bottom=0.25)
+    fig.set_size_inches(20, 20)
+    ax = plt.axes(xlim=(0, DEFAULT_WORLD_DIM), ylim=(0, DEFAULT_WORLD_DIM))
+
+    batch = 99
+
+    def pick_batch(timestep, key):
+        timestep[key] = timestep[key][batch]
+
+    timestep_keys = ('movements', 'utterances', 'locations', 'votes',
+                     'hive_mask', 'hive_values', 'physical')
+    for timestep in timesteps:
+        for key in timestep_keys:
+            pick_batch(timestep, key)
+
+    anim = animation.FuncAnimation(
+        fig,
+        _updateBee,
+        fargs=(num_agents, ax),
+        frames=timesteps,
+        repeat=False)
     writer = animation.writers['ffmpeg'](fps=2)
     anim.save(output_filename, writer=writer)

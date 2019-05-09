@@ -7,7 +7,7 @@ from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import configs
-from animate_epoch import animate
+from animate_epoch import animate, animateBee
 from modules.agent import AgentModule
 from modules.game import GameModule
 from modules.beegame import BeeGameModule
@@ -268,7 +268,10 @@ def main():
             total_loss, timesteps, num_utter, utter_num_t, prob, votes_epoch, votes_ratios = agent(
                 game)
 
-            # output_filename = 'bee_game_epoch_{}_animation.mp4'.format(epoch)
+            output_filename = 'bee_game_epoch_{}_animation.mp4'.format(epoch)
+            animateBee(timesteps, output_filename, num_agents)
+
+
             ratio = game.max_freq(votes_epoch).mean()
 
             votes_ratio_per_epoch.append(ratio)
@@ -279,7 +282,7 @@ def main():
 
             if epoch % 10 == 0:
                 print(prob)
-                # animate(timesteps, output_filename, num_agents)
+
             per_agent_loss = total_loss.item(
             ) / num_agents / game_config.batch_size
 

@@ -103,12 +103,6 @@ class BeeModule(nn.Module):
         self.update_mem(game, "physical", new_mem, agent, other_entity)
         physical_processes[:, other_entity, :] = physical_processed
 
-    # def process_vote(self, game, agent, other_agent, vote_processes):
-    #     vote_processed, new_mem = self.vote_processor(
-    #         game.votes[:, other_agent], game.memories["vote"][:, agent, other_agent])
-    #     self.update_mem(game, "votes", new_mem, agent, other_agent)
-    #     vote_processes[:, other_agent, :] = vote_processed
-
     def get_utterance_feat(self, game, agent):
         #* Good
         """
@@ -131,13 +125,6 @@ class BeeModule(nn.Module):
             self.process_physical(game, agent, entity, physical_processes)
         return self.physical_pooling(physical_processes)
 
-    # def get_vote_feat(self, game, agent):
-    #     vote_processes = Variable(self.Tensor(game.batch_size, game.num_agents,
-    #                         self.processing_hidden_size))
-    #     for voter in range(game.num_agents):
-    #         self.process_vote(game, agent, voter, vote_processes)
-    #     return self.vote_pooling(vote_processes)
-
     def forward(self, game):
         #* Good
         timesteps = []
@@ -157,7 +144,6 @@ class BeeModule(nn.Module):
 
             for agent in range(game.num_swarm):
                 utterance_feat = self.get_utterance_feat(game, agent)
-                #? vote_feat = self.get_vote_feat(game, agent)
                 # ? physical_feat = self.get_physical_feat(game, agent)
                 # Divide the utterances, movement to two divisions or not?
                 self.swarm_get_action(game, agent, utterance_feat, votes,
@@ -182,14 +168,17 @@ class BeeModule(nn.Module):
                 _, ids = utterances.view(-1, self.vocab_size).max(1)
                 utters_nums_t.append(len(torch.unique(ids.view(-1))))
 
-            if not self.training:
-                timesteps.append({
-                    'locations': game.locations,
-                    'movements': movements,
-                    'loss': cost
-                })
-                if self.using_utterances:
-                    timesteps[-1]['utterances'] = utterances
+            timesteps.append({
+                'locations': game.locations,
+                'movements': movements,
+                'loss': cost,
+                'votes': game.votes,
+                'hive_mask': game.hive_mask,
+                'hive_values': game.hive_values,
+                'physical': game.physical,
+            })
+            if self.using_utterances:
+                timesteps[-1]['utterances'] = utterances
 
         utters = torch.cat(utters, 0)
         votes_epoch = torch.cat(votes_epoch, 0)
