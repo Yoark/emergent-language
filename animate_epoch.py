@@ -128,11 +128,13 @@ def _updateBee(t, num_agents, ax):
                 patch = patches.Circle(
                     loc_list, radius=0.3, fc=get_color(vote))
             else:
+                hidden = hive_mask[idx - num_agents].item() == 0
                 plt.text(
                     loc_list[0],
                     loc_list[1] - 0.5,
-                    'value: {:.3f}'.format(
-                        hive_values[idx - num_agents].item()),
+                    'value: {:.3f}{}'.format(
+                        hive_values[idx - num_agents].item(),
+                        ' (hidden)' if hidden else ''),
                     size=10,
                     ha="center",
                     va="center",
